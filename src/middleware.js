@@ -7,6 +7,7 @@ export function middleware(req) {
 
  
   if (
+    pathname.startsWith('/signup')||
     pathname.startsWith('/login') || 
     pathname.startsWith('/api/auth') ||
     pathname.startsWith('/_next/static') || 
