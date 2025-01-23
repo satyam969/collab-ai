@@ -9,6 +9,8 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
     "@google/generative-ai": "^0.21.0",
     "@mui/icons-material": "^6.3.0",
     "@webcontainer/api": "^1.5.1-internal.6",
