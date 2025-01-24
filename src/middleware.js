@@ -19,7 +19,7 @@ export function middleware(req) {
 
 const session = req.cookies.get('__Secure-next-auth.session-token');
 
-  console.log(session);
+  console.log("mil gay hai cookie ",session);
 
   
 
