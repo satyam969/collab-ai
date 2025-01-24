@@ -16,6 +16,7 @@ export function middleware(req) {
     return NextResponse.next();
   }
 
+  console.log('Request Cookies:', req.cookies);
 
 const session = req.cookies.get('__Secure-next-auth.session-token');
 
