@@ -17,7 +17,7 @@ export function middleware(req) {
   }
 
 
-const session = req.cookies.get('next-auth.session-token');
+const session = req.cookies.get('__Secure-next-auth.session-token');
 
   
 
