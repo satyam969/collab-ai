@@ -62,7 +62,14 @@ const options = {
         secure: true, 
       },
     },
-  }
+  },
+   events: {
+    async signOut({ req, res }) {
+      res.setHeader("Set-Cookie", [
+        `__Secure-next-auth.session-token=deleted; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; Secure; SameSite=None`,
+      ]);
+    },
+  },
 };  
 
 
