@@ -58,6 +58,7 @@ const options = {
       options: {
         httpOnly: true,
         sameSite: "none", 
+         path: '/',
         secure: true, 
       },
     },
