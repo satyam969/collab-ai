@@ -531,7 +531,7 @@ try {    e.preventDefault();
       </Modal></Typography>  
           <Divider sx={{ margin: '16px 0', bgcolor: 'rgba(255, 255, 255, 0.3)' }} />  
           <MessageContainer>  
-            {session && chats.map((chat) => (
+            {chats.map((chat) => (
              <MessageBubble key={chat._id} isuser={chat.sender?._id === session?.user?._id ? "true" : "false"}>   
                 <Typography sx={{ fontSize: '0.875rem' }}>{chat.content}</Typography>
               </MessageBubble>  
