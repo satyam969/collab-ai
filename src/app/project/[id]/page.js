@@ -148,7 +148,9 @@ const handleMessage = (message) => {
         };
         setChats((prev) => [...prev,newmess]);
       
-        console.log(chats);
+        // console.log(chats);
+
+         allMessages();
       
       }
         
