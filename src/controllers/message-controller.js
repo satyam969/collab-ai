@@ -8,9 +8,11 @@ const { pusherServer } = require('@/lib/pusherServer');
 // Send Message
 const sendMessage = async (body) => {
     try {
-        const { content, projectid ,sender } = body;
+        const { content, projectid ,sender,filetree } = body;
+        console.log(content);
 
         const isAIMessage= content.includes("@ai");
+
 
         
 
@@ -45,7 +47,7 @@ const sendMessage = async (body) => {
 
         if(isAIMessage) {
 
-            const prompt=content.replace('@ai','');
+            const prompt = content.replace('@ai', '') + (filetree ? ` filetree : ${filetree}` : '');
             const response= await generateResult(prompt);
             const aiUserId = new mongoose.Types.ObjectId(process.env.AI_USER_ID);
 

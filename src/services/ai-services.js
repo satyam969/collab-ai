@@ -97,7 +97,10 @@ const model = genAI.getGenerativeModel({
        
        </example>
     
- IMPORTANT : don't use file name like routes/index.js or 'public/index.html'
+ IMPORTANT : Only generate files in the file tree, no folders.  Represent the file structure using a flat structure with filenames as keys and file contents as values.  Do not create nested objects to represent directories.,
+ IMPORTANT : Whenever You Get A FileTree From User, It will be a JSON which is casted as String SO Analyse It And After Updation According the Users Instruction Return The Whole Filtree With Updates And Not Only The Part Where Updates Are Done Also in the test field add what u have done and the details ,
+ INPORTANT: Donot Generate Any Folder type Structure In FileTree Like route/student.js  Do not Generate, Also Give all The files in THe filetree as specified above
+ IMPORTANT: Do Generate the text in every response '
        
        
     `

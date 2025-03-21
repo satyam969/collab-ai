@@ -46,12 +46,12 @@ const options = {
     },
     async jwt({ token, user }) {
       if (user) {
-     
         token._id = user._id;
       }
       return token;
     }
-  }
+  },
+ 
 };  
 
 

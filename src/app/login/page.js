@@ -113,7 +113,7 @@ const LoginPage = () => {
                     </form>  
                     <Divider sx={{ margin: '16px 0', bgcolor: 'rgba(255, 255, 255, 0.3)' }} />  
                     <Typography textAlign="center" color="white">  
-                        Don’t have an account? <Link href="/register" sx={{ color: 'cyan' }}>Sign up</Link>  
+                        Don’t have an account? <Link href="/signup" sx={{ color: 'cyan' }}>Sign up</Link>  
                     </Typography>  
                 </StyledCard>  
             </Box>  

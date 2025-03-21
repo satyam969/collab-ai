@@ -1,6 +1,6 @@
 "use client";  
 import React, { useEffect, useState } from 'react';  
-import { Container, Typography, Card, Divider, Box, TextField, Button, Modal, List, ListItem, ListItemText,IconButton,Paper } from '@mui/material';  
+import { Container, Typography, Card, Divider, Box, TextField, Button, Modal, List, ListItem, ListItemText,IconButton,Paper, FormControlLabel, Checkbox } from '@mui/material';  
 import { styled } from '@mui/system';  
 import axios from 'axios';
 import { useParams, useRouter } from 'next/navigation';
@@ -8,6 +8,7 @@ import { useSession } from 'next-auth/react';
 import { getWebContainer } from '@/lib/webconatiner';
 import { pusherClient } from '@/lib/pusherClient';
 import CloseIcon from '@mui/icons-material/Close';
+
 
 
 const StyledCard = styled(Card)({  
@@ -55,6 +56,7 @@ const Projects = () => {
   const [chats, setChats] = useState([]);  
   const [fileTree, setFileTree] = useState({});  
   const [selectedFiles, setSelectedFiles] = useState(new Set());  
+  const[include,setInclude]=useState(false);
   const [newMessage, setNewMessage] = useState('');  
   const [selectedFileContent, setSelectedFileContent] = useState('');  
   const [selectedFileName, setSelectedFileName] = useState(''); 
@@ -79,7 +81,7 @@ const Projects = () => {
     if(clickCount==1){
       setTimeout(() => {  
         setClickCount((prevCount) => (prevCount + 1) % 2);  
-      }, 4000);      }
+      }, 6000);      }
   }; 
 
 
@@ -132,23 +134,30 @@ const handleMessage = (message) => {
     
       try {
         const parsedContent = JSON.parse(message.content);
-        console.log("AI Message Content:", parsedContent);
+        console.log("AI Message Content:", parsedContent.text);
+
+
+        
+        
         if(parsedContent?.fileTree){
-      
-
+          
+          
           setLastFileTreeId(message._id); 
-
+          
           setFileTree(parsedContent.fileTree);
-
+          
         }
         if(parsedContent?.text)
-        {const newmess = {
-          ...message, 
-          content: parsedContent.text, 
-        };
-        setChats((prev) => [...prev,newmess]);
-      
-        console.log(chats);
+          {const newmess = {
+            ...message, 
+            content: parsedContent.text, 
+          };
+          setChats((prev) => [...prev,newmess]);
+          
+          setChats((prev) => [...prev]); 
+          
+          // console.log(chats);
+          allMessages();
       
       }
         
@@ -159,6 +168,7 @@ const handleMessage = (message) => {
         }
   }
   else{
+    console.log(message);
   setChats((prev) => [...prev, message]);}
 
 
@@ -178,7 +188,7 @@ return () => {
   pusherClient.unbind('incoming-message', handleMessage);
 };
 
-},[projectid])
+},[projectid,chats])
 
 
   const allMessages =async()=>{
@@ -198,6 +208,8 @@ return () => {
          
           try {
             const parsedContent = JSON.parse(message.content);
+
+            console.log(parsedContent)
           
             if(parsedContent?.fileTree){
               setLastFileTreeId(message._id); 
@@ -275,7 +287,7 @@ return () => {
     setSelectedFileContent(file.file.contents);  
     
     
-    console.log(fileTree);
+    // console.log(fileTree);
     
 
 
@@ -294,9 +306,16 @@ return () => {
   const handleSendMessage = async (e) => {  
 try {    e.preventDefault();
 
+  // console.log("include",include,lastfiletreeid)
+
+const inc=include && lastfiletreeid;
+
+  
+
     const response= await axios.post('/api/messages',
       {
         content: newMessage,
+        ...(inc && { filetree:JSON.stringify(fileTree)}),
         projectid,
         sender:session?.user._id
       }
@@ -531,9 +550,9 @@ try {    e.preventDefault();
       </Modal></Typography>  
           <Divider sx={{ margin: '16px 0', bgcolor: 'rgba(255, 255, 255, 0.3)' }} />  
           <MessageContainer>  
-            {chats.map((chat) => (
-             <MessageBubble key={chat._id} isuser={(chat.sender._id === session?.user._id).toString()}>   
-                <Typography sx={{ fontSize: '0.875rem' }}>{chat.content}</Typography>
+            {chats?.map((chat) => (
+             <MessageBubble key={chat?._id} isuser={(chat?.sender?._id === session?.user._id).toString()}>   
+                <Typography sx={{ fontSize: '0.875rem' }}>{chat?.content}</Typography>
               </MessageBubble>  
             ))}  
           </MessageContainer>  
@@ -547,6 +566,23 @@ try {    e.preventDefault();
               onChange={(e) => setNewMessage(e.target.value)}  
               onKeyPress={(e) => { if (e.key === 'Enter') handleSendMessage();}}  
             />  
+          <FormControlLabel
+        className=' text-white'
+      control={
+        <Checkbox
+        className='border-white'
+          checked={include}
+          onChange={(e) => setInclude(e.target.checked)}
+          sx={{
+            color: 'white',
+            '&.Mui-checked': {
+              color: 'lightblue'
+            },
+          }}
+        />
+      }
+      label="Files"
+    />
             <Button variant="contained" color="primary" onClick={handleSendMessage} sx={{ marginTop: '8px' }}>  
               Send  
             </Button>  
@@ -559,6 +595,7 @@ try {    e.preventDefault();
     
     <Typography className=' p-1 flex flex-row justify-between' variant="h6" color="white">File Tree  <Button onClick={
       async()=>{
+        console.log("File Tree",fileTree,webContainer)
       await webContainer.mount(fileTree)
 
       const installProcess = await webContainer.spawn("npm", [ "install" ])
@@ -583,7 +620,12 @@ try {    e.preventDefault();
   }))
 
 
+  
+
+
   setRunProcess(tempRunProcess)
+
+  // console.log(webContainer);
 
   webContainer.on('server-ready', (port, url) => {
       console.log(port, url)
@@ -601,7 +643,7 @@ try {    e.preventDefault();
       sx={{  
         display: 'flex',  
         flexDirection: 'row',  
-        overflowX: 'auto',  
+        overflowX: 'scroll',  
         marginBottom: 2,  
         '&::-webkit-scrollbar': {  
           height: '8px', 
