@@ -1,6 +1,9 @@
+import connectDb from '@/lib/mongodb';
 import { NextResponse } from 'next/server';
 
 const { allusers } = require('../../../controllers/user-controller');  
+
+await connectDb();
 
 export const GET= async(req) => {  
   

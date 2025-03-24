@@ -20,7 +20,7 @@ const chatSchema=mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "Message",
       },
-},{timestamps:true, _id: false,})
+},{timestamps:true, _id: true,})
 
 
 

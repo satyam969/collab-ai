@@ -63,7 +63,7 @@ const fetchProjects = async (userId) => {
             .populate("latestMessage")
             .sort({ updatedAt: -1 });
 
-            console.log(`${chatData}`);
+            // console.log(`${chatData}`);
 
         const populatedData = await User.populate(chatData, {
             path: "latestMessage.sender",

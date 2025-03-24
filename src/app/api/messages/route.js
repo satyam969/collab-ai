@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 import { sendMessage, allMessages,updateMessage } from '../../../controllers/message-controller';
+import connectDb from '@/lib/mongodb';
+
+await connectDb();
 
 export const POST = async (req) => {
     try {

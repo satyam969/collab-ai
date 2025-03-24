@@ -5,6 +5,9 @@ import {
     fetchProjects,
     removeUser
 } from '../../../controllers/chat-controllers';
+import connectDb from '@/lib/mongodb';
+
+await connectDb();
 
 export const POST = async (req) => {
     try {
