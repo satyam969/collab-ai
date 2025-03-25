@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 export function middleware(req) {
   const { pathname } = req.nextUrl;
 
-  console.log('Middleware running for:', pathname);
+
 
  
   if (
@@ -23,7 +23,7 @@ export function middleware(req) {
   const session = req.cookies.get(cookieName);
   
 
-  console.log("session token",session);
+
 
  
   if (session) {

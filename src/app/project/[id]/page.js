@@ -1,6 +1,6 @@
 "use client";  
-import React, { useEffect, useState } from 'react';  
-import { Container, Typography, Card, Divider, Box, TextField, Button, Modal, List, ListItem, ListItemText,IconButton,Paper, FormControlLabel, Checkbox } from '@mui/material';  
+import React, { useEffect, useState, useRef } from 'react'; // Added useRef for scroll control
+import { Container, Typography, Card, Divider, Box, TextField, Button, Modal, List, ListItem, ListItemText, IconButton, Paper, FormControlLabel, Checkbox } from '@mui/material';  
 import { styled } from '@mui/system';  
 import axios from 'axios';
 import { useParams, useRouter } from 'next/navigation';
@@ -8,8 +8,6 @@ import { useSession } from 'next-auth/react';
 import { getWebContainer } from '@/lib/webconatiner';
 import { pusherClient } from '@/lib/pusherClient';
 import CloseIcon from '@mui/icons-material/Close';
-
-
 
 const StyledCard = styled(Card)({  
   backgroundColor: '#222',  
@@ -46,172 +44,114 @@ const MessageBubble = styled(Card)(({ isuser }) => ({
   minHeight: '40px',            
 }));  
 
-
-
 const Projects = () => {  
-  const [ runProcess, setRunProcess ] = useState(null)
+  const [runProcess, setRunProcess] = useState(null);
   const [open, setOpen] = useState(false);
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
   const [chats, setChats] = useState([]);  
   const [fileTree, setFileTree] = useState({});  
   const [selectedFiles, setSelectedFiles] = useState(new Set());  
-  const[include,setInclude]=useState(false);
+  const [include, setInclude] = useState(false);
   const [newMessage, setNewMessage] = useState('');  
   const [selectedFileContent, setSelectedFileContent] = useState('');  
   const [selectedFileName, setSelectedFileName] = useState(''); 
-  const router=useRouter(); 
-  const [lastfiletreeid,setLastFileTreeId] = useState(null);
-  const [webContainer,setWebContainer] = useState(null);
-  const[url,setUrl]=useState('');
-
+  const router = useRouter(); 
+  const [lastfiletreeid, setLastFileTreeId] = useState(null);
+  const [webContainer, setWebContainer] = useState(null);
+  const [url, setUrl] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-
-  const[addedUsers,setAddedUsers] = useState([]);
-
-  const[searchuser,setSearchUser]=useState([]);
-
-  const { data: session,status } = useSession();
-
+  const [addedUsers, setAddedUsers] = useState([]);
+  const [searchuser, setSearchUser] = useState([]);
+  const { data: session, status } = useSession();
   const { id } = useParams();
-
   const [clickCount, setClickCount] = useState(1);  
+  const messageContainerRef = useRef(null); // Added ref for MessageContainer
 
   const handleClickbuton = () => {  
-    if(clickCount==1){
+    if (clickCount == 1) {
       setTimeout(() => {  
         setClickCount((prevCount) => (prevCount + 1) % 2);  
-      }, 6000);      }
+      }, 6000);     
+    }
   }; 
 
-
-  const projectid=id;
-
-
+  const projectid = id;
 
   if (!projectid) {
     return <div>Loading...</div>;
   }
 
-
-const addusers=async(usersearch)=>{
-  try {
-
-
-    const response = await axios.get(`/api/user`, {params: usersearch});
-
-    console.log(addedUsers);
-
-    const addedUserIdsSet = new Set(addedUsers?.map(user => user._id)); 
-
-    console.log(addedUserIdsSet)
-
-   
-    const filteredUsers = response.data.data.filter(user => {  
-        
+  const addusers = async (usersearch) => {
+    try {
+      const response = await axios.get(`/api/user`, { params: usersearch });
+      const addedUserIdsSet = new Set(addedUsers?.map(user => user._id)); 
+      const filteredUsers = response.data.data.filter(user => {  
         return !addedUserIdsSet.has(user._id);  
-    });  
+      });  
+      setSearchUser(filteredUsers);
+    } catch (error) {
+      console.log(error);
+    }
+  };
 
-    console.log(filteredUsers);
-    
-  
-    setSearchUser(filteredUsers);
-    
-  } catch (error) {
-    console.log(error);
-  }
-}
+  useEffect(() => {
+    pusherClient.subscribe(`${projectid}`);
+    addusers();
 
-useEffect(() => {
-
-pusherClient.subscribe(`${projectid}`)
-
-
-addusers();
-
-const handleMessage = (message) => {
-  if(message.sender && message.sender._id === process.env.NEXT_PUBLIC_AI){
-    
-      try {
-        const parsedContent = JSON.parse(message.content);
-        console.log("AI Message Content:", parsedContent.text);
-
-
-        
-        
-        if(parsedContent?.fileTree){
-          
-          
-          setLastFileTreeId(message._id); 
-          
-          setFileTree(parsedContent.fileTree);
-          
-        }
-        if(parsedContent?.text)
-          {const newmess = {
-            ...message, 
-            content: parsedContent.text, 
-          };
-          setChats((prev) => [...prev,newmess]);
-          
-          setChats((prev) => [...prev]); 
-          
-          // console.log(chats);
-          allMessages();
-      
-      }
-        
-      }        
-
-        catch(error){
+    const handleMessage = (message) => {
+      if (message.sender && message.sender._id === process.env.NEXT_PUBLIC_AI) {
+        try {
+          const parsedContent = JSON.parse(message.content);
+          if (parsedContent?.fileTree) {
+            setLastFileTreeId(message._id); 
+            setFileTree(parsedContent.fileTree);
+          }
+          if (parsedContent?.text) {
+            const newmess = {
+              ...message, 
+              content: parsedContent.text, 
+            };
+            setChats((prev) => [...prev, newmess]);
+            allMessages();
+          }
+        } catch (error) {
           console.log(error);
         }
-  }
-  else{
-    console.log(message);
-  setChats((prev) => [...prev, message]);}
+      } else {
+        setChats((prev) => [...prev, message]);
+      }
+    };
 
+    const handleUpdatedFileTree = (message) => {
+      setSelectedFiles('');
+      setSelectedFileContent('');
+    
+      setFileTree(message);
+    };
 
+    pusherClient.bind('incoming-message', handleMessage);
+    pusherClient.bind('updatedfiletree', handleUpdatedFileTree);
 
-};
+    return () => {
+      pusherClient.unsubscribe(`chat:${projectid}`);
+      pusherClient.unbind('incoming-message', handleMessage);
+    };
+  }, [projectid, chats]);
 
-const handleUpdatedFileTree = (message) => {
-  setFileTree(message);
-};
-
-pusherClient.bind('incoming-message',handleMessage);
-
-pusherClient.bind('updatedfiletree',handleUpdatedFileTree);
-
-return () => {
-  pusherClient.unsubscribe(`chat:${projectid}`);
-  pusherClient.unbind('incoming-message', handleMessage);
-};
-
-},[projectid,chats])
-
-
-  const allMessages =async()=>{
+  const allMessages = async () => {
     try {
-
       const response = await axios.get('/api/messages', {
         params: {
           chatId: projectid,  
         }
       });
-      
-
-      const ALLMESSAGE=[];
-
+      const ALLMESSAGE = [];
       response.data.forEach((message) => {
         if (message.sender && message.sender._id === process.env.NEXT_PUBLIC_AI) {
-         
           try {
             const parsedContent = JSON.parse(message.content);
-
-            console.log(parsedContent)
-          
-            if(parsedContent?.fileTree){
+            if (parsedContent?.fileTree) {
               setLastFileTreeId(message._id); 
               setFileTree(parsedContent.fileTree);
             }
@@ -219,78 +159,56 @@ return () => {
               ...message, 
               content: parsedContent.text, 
             };
-
-           ALLMESSAGE.push(newmess);
+            ALLMESSAGE.push(newmess);
           } catch (error) {
             console.error("Failed to parse AI message content:", error);
           }
         } else {
-         ALLMESSAGE.push(message);
-         
+          ALLMESSAGE.push(message);
         }
       });
-
-   
       setChats(ALLMESSAGE);
-      
-   
     } catch (error) {
       console.log(error);
     }
-  }
+  };
 
-  const Chat=async()=>{
-   try {
-    
-     
-    const response=await axios.post(`/api/chats`,{
-      projectid
-    });
-
-
-    setAddedUsers(response.data.result.users);
-    
-
-   } catch (error) {
-     console.error(error);
-   }
-  }
-
-  
+  const Chat = async () => {
+    try {
+      const response = await axios.post(`/api/chats`, { projectid });
+      setAddedUsers(response.data.result.users);
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
   useEffect(() => {
-
     Chat();
-
     if (!webContainer) {
-            getWebContainer().then(container => {
-                setWebContainer(container)
-                console.log("container started")
-            })
-        }
-
+      getWebContainer().then(container => {
+        setWebContainer(container);
+        console.log("container started");
+      });
+    }
     allMessages();
-
   }, []);
 
+  // Added useEffect to scroll to the bottom whenever chats update
+  useEffect(() => {
+    if (messageContainerRef.current) {
+      messageContainerRef.current.scrollTo({
+        top: messageContainerRef.current.scrollHeight,
+        behavior: 'smooth', // Smooth scrolling for better UX
+      });
+    }
+  }, [chats]); // Trigger scroll whenever chats state changes
 
   const handleSelectFile = (file) => {  
-    if(!file){
+    if (!file) {
       return;
     }
-
     setSelectedFiles((prev) => new Set(prev).add(file.file)); 
-
-    
-    
-    
     setSelectedFileContent(file.file.contents);  
-    
-    
-    // console.log(fileTree);
-    
-
-
   };  
 
   const handleRemoveFile = (fileId) => {  
@@ -303,255 +221,209 @@ return () => {
     setSelectedFileName('');
   };  
 
-  const handleSendMessage = async (e) => {  
-try {    e.preventDefault();
-
-  // console.log("include",include,lastfiletreeid)
-
-const inc=include && lastfiletreeid;
-
-  
-
-    const response= await axios.post('/api/messages',
-      {
+  const handleSendMessage = async (e) => {
+    try {    
+      e.preventDefault();
+      const inc = include && lastfiletreeid;
+      const response = await axios.post('/api/messages', {
         content: newMessage,
-        ...(inc && { filetree:JSON.stringify(fileTree)}),
+        ...(inc && { filetree: JSON.stringify(fileTree) }),
         projectid,
-        sender:session?.user._id
-      }
-    );
-
-
-      setChats([  
-        ...chats,
-        response.data.result  
-      ]);  
-      
+        sender: session?.user._id
+      });
+      setChats([...chats, response.data.result]);  
       setNewMessage('');  
- 
-   } 
-    catch(error){
+    } catch (error) {
       console.error(error);
     }
   };  
 
-
-
-
   const handleAddUser = async (user) => {
-   
-    const response = await axios.post('/api/chats',{
+    const response = await axios.post('/api/chats', {
       projectid,
-      userId:user._id
+      userId: user._id
     });
-
-
-  
     setSearchUser(searchuser.filter((item) => item.id !== user.id));
-
-   
     setAddedUsers([...addedUsers, user]);
   };
 
   const handleRemoveUser = async (user) => {
-   
-    const response = await axios.delete('/api/chats',{
-     params:{ projectid,
-      userId:user._id}
+    const response = await axios.delete('/api/chats', {
+      params: { projectid, userId: user._id }
     });
-
-    // console.log(response);
-
-   
     setAddedUsers(addedUsers.filter((item) => item.id !== user.id));
-
-   
     setSearchUser([...searchuser, user]);
-    
   };
 
   const filteredSearchUsers = searchuser.filter((user) =>
     user.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-
-  const handleSave=async()=>{
+  const handleSave = async () => {
     try {
-
-      // pusher se update hone ke bad sirf filetree aaega wpis jiski wjas se koi change nhi hoga waise
-
-      // console.log(fileTree);
-
-      // console.log(fileTree[selectedFileName]);
-
-      // fileTree[selectedFileName].file.contents=selectedFileContent;
-
-
-      if(!lastfiletreeid){
+      if (!lastfiletreeid) {
         console.log('No Prev Prompt Generated fileTree ');
         return;
       }
-
-      // console.log(fileTree);
-
-      
-      const response=await axios.patch('/api/messages',{
-        content: JSON.stringify({fileTree}),
-        messageId:lastfiletreeid
-      })
+      const response = await axios.patch('/api/messages', {
+        content: JSON.stringify({ fileTree }),
+        messageId: lastfiletreeid
+      });
       console.log(response);
-
     } catch (error) {
       console.log(error);
     }
-  }
+  };
 
   return (  
     <Container
-    
-    className="my-container flex flex-row h-screen w-screen bg-gray-900 p-0">  
-    
-    <Box  
-  className="w-[30vw] m-1 p-2 rounded-lg"  
-  sx={{  
-    '&::-webkit-scrollbar': {  
-      width: '8px',   
-      height: '8px',  
-    },  
-    '&::-webkit-scrollbar-thumb': {  
-      background: 'rgba(255, 255, 255, 0.4)',  
-      borderRadius: '10px',  
-    },  
-    '&::-webkit-scrollbar-track': {  
-      background: 'transparent',   
-    },  
-  }}  
->   
+      maxWidth={false} // Disable Material-UI's default max-width
+      className="my-container flex flex-row h-screen w-screen bg-gray-900 p-0"
+      sx={{
+        width: '100vw', // Ensure full viewport width
+        height: '100vh', // Ensure full viewport height
+        margin: 0, // Remove any default margins
+        padding: 0, // Remove any default padding
+      }}
+    >  
+      <Box  
+        className="w-[20vw] m-1 p-2 rounded-lg" // Adjusted width to ensure proper proportions
+        sx={{  
+          '&::-webkit-scrollbar': {  
+            width: '8px',   
+            height: '8px',  
+          },  
+          '&::-webkit-scrollbar-thumb': {  
+            background: 'rgba(255, 255, 255, 0.4)',  
+            borderRadius: '10px',  
+          },  
+          '&::-webkit-scrollbar-track': {  
+            background: 'transparent',   
+          },  
+        }}  
+      >   
         <StyledCard className="h-full flex flex-col">  
-          <Typography className='flex flex-row justify-between' variant="h6" color="white">Chats  <Button onClick={handleOpen}>Add Users</Button>
-          <Modal
-        open={open}
-        onClose={handleClose}
-        aria-labelledby="modal-modal-title"
-        aria-describedby="modal-modal-description"
-        sx={{
-          backdropFilter: 'blur(10px)',
-          backgroundColor: 'rgba(0, 0, 0, 0.7)',
-        }}
-      >
-        <Box
-          sx={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            width: 400,
-            backgroundColor: '#1a1a1a',
-            border: '1px solid #333',
-            boxShadow: 24,
-            p: 3,
-            borderRadius: 2,
-            color: 'white',
-          }}
-        >
-          <Typography id="modal-modal-title" variant="h6" component="h2" gutterBottom>
-            Available Users
-          </Typography>
-
-          <TextField
-            label="Search Users"
-            variant="outlined"
-            fullWidth
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)} 
-            sx={{ mb: 2, backgroundColor: 'white', borderRadius: '4px' }}
-          />
-
-          <Typography variant="h6" component="h2" gutterBottom>
-            Users in this Project
-          </Typography>
-
-          {addedUsers.length > 0 ? (
-            <List>
-              {addedUsers.map((user) => (
-                <ListItem
-                  key={user._id}
-                  sx={{
-                    backgroundColor: '#333',
-                    marginBottom: '8px',
-                    borderRadius: '8px',
-                    position: 'relative',
-                  }}
-                >
-                  <ListItemText primary={user.name} sx={{ color: 'white' }} />
-                  <IconButton
-                    onClick={() => handleRemoveUser(user)}
-                    sx={{
-                      position: 'absolute',
-                      top: '50%',
-                      right: '10px',
-                      transform: 'translateY(-50%)',
-                      color: '#f44336',
-                    }}
-                  >
-                    <CloseIcon />
-                  </IconButton>
-                </ListItem>
-              ))}
-            </List>
-          ) : (
-            <Typography variant="body1" sx={{ color: '#bbb' }}>
-              No users in this project.
-            </Typography>
-          )}
-
-          <Typography variant="h6" component="h2" gutterBottom sx={{ mt: 3 }}>
-            Add Users to Project
-          </Typography>
-
-          {filteredSearchUsers.length > 0 ? (
-            <List>
-              {filteredSearchUsers.map((user) => (
-                <ListItem
-                  key={user._id}
-                  sx={{
-                    backgroundColor: '#333',
-                    marginBottom: '8px',
-                    borderRadius: '8px',
-                    position: 'relative',
-                  }}
-                >
-                  <ListItemText primary={user.name} sx={{ color: 'white' }} />
-                  <IconButton
-                    onClick={() => handleAddUser(user)}
-                    sx={{
-                      position: 'absolute',
-                      top: '50%',
-                      right: '10px',
-                      transform: 'translateY(-50%)',
-                      color: '#4caf50',
-                    }}
-                  >
-                    <CloseIcon />
-                  </IconButton>
-                </ListItem>
-              ))}
-            </List>
-          ) : (
-            <Typography variant="body1" sx={{ color: '#bbb' }}>
-              No users available to add.
-            </Typography>
-          )}
-
-          <Button onClick={handleClose} variant="contained" sx={{ mt: 2, backgroundColor: '#555', color: 'white' }}>
-            Close
-          </Button>
-        </Box>
-      </Modal></Typography>  
+          <Typography className='flex flex-row justify-between' variant="h6" color="white">
+            Chats  
+            <Button onClick={handleOpen}>Add Users</Button>
+            <Modal
+              open={open}
+              onClose={handleClose}
+              aria-labelledby="modal-modal-title"
+              aria-describedby="modal-modal-description"
+              sx={{
+                backdropFilter: 'blur(10px)',
+                backgroundColor: 'rgba(0, 0, 0, 0.7)',
+              }}
+            >
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  width: 400,
+                  backgroundColor: '#1a1a1a',
+                  border: '1px solid #333',
+                  boxShadow: 24,
+                  p: 3,
+                  borderRadius: 2,
+                  color: 'white',
+                }}
+              >
+                <Typography id="modal-modal-title" variant="h6" component="h2" gutterBottom>
+                  Available Users
+                </Typography>
+                <TextField
+                  label="Search Users"
+                  variant="outlined"
+                  fullWidth
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)} 
+                  sx={{ mb: 2, backgroundColor: 'white', borderRadius: '4px' }}
+                />
+                <Typography variant="h6" component="h2" gutterBottom>
+                  Users in this Project
+                </Typography>
+                {addedUsers.length > 0 ? (
+                  <List>
+                    {addedUsers.map((user) => (
+                      <ListItem
+                        key={user._id}
+                        sx={{
+                          backgroundColor: '#333',
+                          marginBottom: '8px',
+                          borderRadius: '8px',
+                          position: 'relative',
+                        }}
+                      >
+                        <ListItemText primary={user.name} sx={{ color: 'white' }} />
+                        <IconButton
+                          onClick={() => handleRemoveUser(user)}
+                          sx={{
+                            position: 'absolute',
+                            top: '50%',
+                            right: '10px',
+                            transform: 'translateY(-50%)',
+                            color: '#f44336',
+                          }}
+                        >
+                          <CloseIcon />
+                        </IconButton>
+                      </ListItem>
+                    ))}
+                  </List>
+                ) : (
+                  <Typography variant="body1" sx={{ color: '#bbb' }}>
+                    No users in this project.
+                  </Typography>
+                )}
+                <Typography variant="h6" component="h2" gutterBottom sx={{ mt: 3 }}>
+                  Add Users to Project
+                </Typography>
+                {filteredSearchUsers.length > 0 ? (
+                  <List>
+                    {filteredSearchUsers.map((user) => (
+                      <ListItem
+                        key={user._id}
+                        sx={{
+                          backgroundColor: '#333',
+                          marginBottom: '8px',
+                          borderRadius: '8px',
+                          position: 'relative',
+                        }}
+                      >
+                        <ListItemText primary={user.name} sx={{ color: 'white' }} />
+                        <IconButton
+                          onClick={() => handleAddUser(user)}
+                          sx={{
+                            position: 'absolute',
+                            top: '50%',
+                            right: '10px',
+                            transform: 'translateY(-50%)',
+                            color: '#4caf50',
+                          }}
+                        >
+                          <CloseIcon />
+                        </IconButton>
+                      </ListItem>
+                    ))}
+                  </List>
+                ) : (
+                  <Typography variant="body1" sx={{ color: '#bbb' }}>
+                    No users available to add.
+                  </Typography>
+                )}
+                <Button onClick={handleClose} variant="contained" sx={{ mt: 2, backgroundColor: '#555', color: 'white' }}>
+                  Close
+                </Button>
+              </Box>
+            </Modal>
+          </Typography>  
           <Divider sx={{ margin: '16px 0', bgcolor: 'rgba(255, 255, 255, 0.3)' }} />  
-          <MessageContainer>  
+          <MessageContainer ref={messageContainerRef}> {/* Added ref to MessageContainer */}
             {chats?.map((chat) => (
-             <MessageBubble key={chat?._id} isuser={(chat?.sender?._id === session?.user._id).toString()}>   
+              <MessageBubble key={chat?._id} isuser={(chat?.sender?._id === session?.user._id).toString()}>   
                 <Typography sx={{ fontSize: '0.875rem' }}>{chat?.content}</Typography>
               </MessageBubble>  
             ))}  
@@ -564,25 +436,25 @@ const inc=include && lastfiletreeid;
               placeholder="Type a message..."  
               value={newMessage}  
               onChange={(e) => setNewMessage(e.target.value)}  
-              onKeyPress={(e) => { if (e.key === 'Enter') handleSendMessage();}}  
+              onKeyPress={(e) => { if (e.key === 'Enter') handleSendMessage(e);}} // Fixed: Pass event to handleSendMessage
             />  
-          <FormControlLabel
-        className=' text-white'
-      control={
-        <Checkbox
-        className='border-white'
-          checked={include}
-          onChange={(e) => setInclude(e.target.checked)}
-          sx={{
-            color: 'white',
-            '&.Mui-checked': {
-              color: 'lightblue'
-            },
-          }}
-        />
-      }
-      label="Files"
-    />
+            <FormControlLabel
+              className='text-white'
+              control={
+                <Checkbox
+                  className='border-white'
+                  checked={include}
+                  onChange={(e) => setInclude(e.target.checked)}
+                  sx={{
+                    color: 'white',
+                    '&.Mui-checked': {
+                      color: 'lightblue'
+                    },
+                  }}
+                />
+              }
+              label="Files"
+            />
             <Button variant="contained" color="primary" onClick={handleSendMessage} sx={{ marginTop: '8px' }}>  
               Send  
             </Button>  
@@ -590,171 +462,148 @@ const inc=include && lastfiletreeid;
         </StyledCard>  
       </Box>  
 
-<Box className="w-[40vw] m-2 p-2 rounded-lg flex flex-col">  
-  <StyledCard className="h-full flex flex-col">  
-    
-    <Typography className=' p-1 flex flex-row justify-between' variant="h6" color="white">File Tree  <Button onClick={
-      async()=>{
-        console.log("File Tree",fileTree,webContainer)
-      await webContainer.mount(fileTree)
+      <Box className="w-[40vw] m-2 p-2 rounded-lg flex flex-col">  
+        <StyledCard className="h-full flex flex-col">  
+          <Typography className='p-1 flex flex-row justify-between' variant="h6" color="white">
+            File Tree  
+            <Button onClick={async () => {
+              // console.log("File Tree", fileTree, webContainer);
+              await webContainer.mount(fileTree);
+              const installProcess = await webContainer.spawn("npm", ["install"]);
+              installProcess.output.pipeTo(new WritableStream({
+                write(chunk) {
+                  console.log(chunk);
+                }
+              }));
+              if (runProcess) {
+                runProcess.kill();
+              }
+              let tempRunProcess = await webContainer.spawn("npm", ["start"]);
+              tempRunProcess.output.pipeTo(new WritableStream({
+                write(chunk) {
+                  console.log(chunk);
+                }
+              }));
+              setRunProcess(tempRunProcess);
+              webContainer.on('server-ready', (port, url) => {
+                console.log(port, url);
+                setUrl(url);
+              });
+              handleClickbuton();
+            }}>
+              {clickCount === 0 ? 'run' : 'install'}
+            </Button> 
+          </Typography>  
+          <Divider sx={{ margin: '16px 0', bgcolor: 'rgba(255, 255, 255, 0.3)' }} />  
+          <Box  
+            sx={{  
+              display: 'flex',  
+              flexDirection: 'row',  
+              overflowX: 'scroll',  
+              marginBottom: 2,  
+              '&::-webkit-scrollbar': {  
+                height: '8px', 
+              },  
+              '&::-webkit-scrollbar-thumb': {  
+                background: 'rgba(255, 255, 255, 0.4)',  
+                borderRadius: '10px',  
+              },  
+              '&::-webkit-scrollbar-track': {  
+                background: 'transparent', 
+              },  
+            }}  
+          >  
+            {Object.keys(fileTree).map((file, index) => (
+              <button
+                key={index}
+                onClick={() => {
+                  handleSelectFile(fileTree[file]);
+                  setSelectedFileName(file);
+                }}
+                className="tree-element cursor-pointer p-2 px-4 flex items-center gap-2 bg-slate-300 w-full"
+              >
+                <p className='font-semibold text-lg'>{file}</p>
+              </button>
+            ))}  
+          </Box>  
+          <Box sx={{  
+            padding: '16px',  
+            backgroundColor: 'rgba(40, 40, 40, 0.9)',  
+            borderRadius: '8px',  
+            color: 'white',  
+            whiteSpace: 'pre-wrap',  
+            overflow: 'auto',  
+            marginTop: '16px',  
+            fontFamily: 'monospace',  
+            fontSize: '14px',  
+            lineHeight: '1.5',  
+            '&::-webkit-scrollbar': {  
+              height: '8px', 
+            },  
+            '&::-webkit-scrollbar-thumb': {  
+              background: 'rgba(255, 255, 255, 0.4)',  
+              borderRadius: '10px',  
+            },  
+            '&::-webkit-scrollbar-track': {  
+              background: 'transparent', 
+            },  
+          }}>  
+            <TextField
+              multiline
+              fullWidth
+              rows={15}
+              variant="outlined"
+              value={selectedFileContent}
+              onChange={(e) => {
+                setSelectedFileContent(e.target.value);
+                fileTree[selectedFileName].file.contents = selectedFileContent;
+              }} 
+              InputProps={{
+                style: { color: 'white', backgroundColor: '#2c2c2c' }, 
+              }}
+            />
+            <Button onClick={handleSave}>Save</Button>
+          </Box>  
+        </StyledCard>  
+      </Box>
 
-      const installProcess = await webContainer.spawn("npm", [ "install" ])
-
-      installProcess.output.pipeTo(new WritableStream({
-        write(chunk) {
-            console.log(chunk)
-        }
-    }))
-
-
-    if (runProcess) {
-      runProcess.kill()
-  }
-
-  let tempRunProcess = await webContainer.spawn("npm", [ "start" ]);
-
-  tempRunProcess.output.pipeTo(new WritableStream({
-      write(chunk) {
-          console.log(chunk)
-      }
-  }))
-
-
-  
-
-
-  setRunProcess(tempRunProcess)
-
-  // console.log(webContainer);
-
-  webContainer.on('server-ready', (port, url) => {
-      console.log(port, url)
-      setUrl(url)
-  })
-
-
-  handleClickbuton()
-  // console.log(clickCount);
-      }
-    }>{clickCount===0?' run ':' install '}</Button> </Typography>  
-    
-    <Divider sx={{ margin: '16px 0', bgcolor: 'rgba(255, 255, 255, 0.3)' }} />  
-    <Box  
-      sx={{  
-        display: 'flex',  
-        flexDirection: 'row',  
-        overflowX: 'scroll',  
-        marginBottom: 2,  
-        '&::-webkit-scrollbar': {  
-          height: '8px', 
-        },  
-        '&::-webkit-scrollbar-thumb': {  
-          background: 'rgba(255, 255, 255, 0.4)',  
-          borderRadius: '10px',  
-        },  
-        '&::-webkit-scrollbar-track': {  
-          background: 'transparent', 
-        },  
-      }}  
-    >  
-      { Object.keys(fileTree).map((file,index) => (
-                                <button
-                                    key={index}
-                                    onClick={() => {
-                                    
-                                        handleSelectFile(fileTree[file]);
-                                        setSelectedFileName(file);
-                                     
-                                    }}
-                                    className="tree-element cursor-pointer p-2 px-4 flex items-center gap-2 bg-slate-300 w-full">
-                                    <p
-                                        className='font-semibold text-lg'
-                                    >{file}</p>
-                                </button>))}  
-    </Box>  
-    <Box sx={{  
-      padding: '16px',  
-      backgroundColor: 'rgba(40, 40, 40, 0.9)',  
-      borderRadius: '8px',  
-      color: 'white',  
-      whiteSpace: 'pre-wrap',  
-      overflow: 'auto',  
-      marginTop: '16px',  
-      fontFamily: 'monospace',  
-      fontSize: '14px',  
-      lineHeight: '1.5',  
-      '&::-webkit-scrollbar': {  
-        height: '8px', 
-      },  
-      '&::-webkit-scrollbar-thumb': {  
-        background: 'rgba(255, 255, 255, 0.4)',  
-        borderRadius: '10px',  
-      },  
-      '&::-webkit-scrollbar-track': {  
-        background: 'transparent', 
-      },  
-    }}>  
-     <TextField
-  multiline
-  fullWidth
-  rows={15}
-  variant="outlined"
-  value={selectedFileContent}
-  onChange={(e) => {
-    
-    setSelectedFileContent(e.target.value)
-    fileTree[selectedFileName].file.contents=selectedFileContent;
-    // console.log(selectedFileContent)
-    // console.log(fileTree[selectedFileName])
-  }} 
-  InputProps={{
-    style: { color: 'white', backgroundColor: '#2c2c2c' }, 
-  }}
-/>
-<Button onClick={handleSave}>Save</Button>
-    </Box>  
-  </StyledCard>  
-</Box>
-
-<Box className="w-[60vw] m-4 p-4 rounded-lg shadow-lg bg-gray-800">
-  <StyledCard className="h-full">
-    <Typography variant="h5" color="white" className="mb-2">
-      Project View
-    </Typography>
-    <Divider sx={{ margin: '16px 0', bgcolor: 'rgba(255, 255, 255, 0.5)' }} />
-
-    <TextField
-      value={url} 
-      onChange={(e) => setUrl(e.target.value)} 
-      label="Project URL"
-      variant="outlined"
-      fullWidth
-      className="mb-4"
-      inputProps={{ style: { color: 'white' } }} 
-    />
- {url && webContainer && (<Paper
-          sx={{
-            width: '100%',
-            height: '80vh',
-            borderRadius: 2,
-            overflow: 'hidden',
-          }}
-        >
-          <iframe
-            src={url}
-            title="Dynamic Content"
-            style={{
-              width: '100%',
-              height: '100%',
-              border: 'none',
-            }}
+      <Box className="w-[40vw] m-2 p-2 rounded-lg flex flex-col">  
+        <StyledCard className="h-full">  
+          <Typography variant="h5" color="white" className="mb-2">
+            Project View
+          </Typography>
+          <Divider sx={{ margin: '16px 0', bgcolor: 'rgba(255, 255, 255, 0.5)' }} />
+          <TextField
+            value={url} 
+            onChange={(e) => setUrl(e.target.value)} 
+            label="Project URL"
+            variant="outlined"
+            fullWidth
+            className="mb-4"
+            inputProps={{ style: { color: 'white' } }} 
           />
-        </Paper>
+          {url && webContainer && (
+            <Paper
+              sx={{
+                width: '100%',
+                height: '80vh',
+                borderRadius: 2,
+                overflow: 'hidden',
+              }}
+            >
+              <iframe
+                src={url}
+                title="Dynamic Content"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  border: 'none',
+                }}
+              />
+            </Paper>
           )}
-  </StyledCard>
-</Box>
-
-
+        </StyledCard>  
+      </Box>
     </Container>  
   );  
 };  
