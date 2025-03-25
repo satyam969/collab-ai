@@ -10,6 +10,8 @@ if (!process.env.JWT_SECRET) {
 
 const isProduction = process.env.NODE_ENV === "production";
 
+console.log("production",isProduction);
+
 const options = {  
   providers: [  
     CredentialsProvider({  
