@@ -4,6 +4,15 @@ import connectDb from '@/lib/mongodb';
 
 await connectDb();
 
+
+export const config = {
+    api: {
+      bodyParser: {
+        sizeLimit: '10mb',
+      },
+    },
+  };
+
 export const POST = async (req) => {
     try {
         const body = await req.json(); 
