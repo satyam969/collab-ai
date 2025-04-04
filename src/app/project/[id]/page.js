@@ -11,13 +11,13 @@ import CloseIcon from '@mui/icons-material/Close';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import DeleteIcon from '@mui/icons-material/Delete';
-import NoteAddIcon from '@mui/icons-material/NoteAdd'; // Icon for new file
-import CreateNewFolderIcon from '@mui/icons-material/CreateNewFolder'; // Icon for new folder
+import NoteAddIcon from '@mui/icons-material/NoteAdd'; 
+import CreateNewFolderIcon from '@mui/icons-material/CreateNewFolder'; 
 import FolderIcon from '@mui/icons-material/Folder';
 import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
 import AceEditor from 'react-ace';
 
-// Import Ace Editor themes and modes
+
 import 'ace-builds/src-noconflict/mode-javascript';
 import 'ace-builds/src-noconflict/mode-typescript';
 import 'ace-builds/src-noconflict/mode-json';
@@ -75,7 +75,7 @@ const Projects = () => {
   const [runProcess, setRunProcess] = useState(null);
   const [open, setOpen] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [createPath, setCreatePath] = useState('Root'); // Track the path where the new item will be created
+  const [createPath, setCreatePath] = useState('Root'); 
   const [newItemName, setNewItemName] = useState('');
   const [newItemType, setNewItemType] = useState('file');
   const handleOpen = () => setOpen(true);
@@ -145,19 +145,19 @@ const Projects = () => {
     const handleMessage = (message) => {
       if (message.sender && message.sender._id === process.env.NEXT_PUBLIC_AI) {
         try {
-          const parsedContent = JSON.parse(message.content);
-          if (parsedContent?.fileTree) {
-            setLastFileTreeId(message._id); 
-            setFileTree(parsedContent.fileTree);
-          }
-          if (parsedContent?.text) {
-            const newmess = {
-              ...message, 
-              content: parsedContent.text, 
-            };
-            setChats((prev) => [...prev, newmess]);
+          // const parsedContent = JSON.parse(message.content);
+          // if (parsedContent?.fileTree) {
+          //   setLastFileTreeId(message._id); 
+          //   setFileTree(parsedContent.fileTree);
+          // }
+          // if (parsedContent?.text) {
+          //   const newmess = {
+          //     ...message, 
+          //     content: parsedContent.text, 
+          //   };
+          //   setChats((prev) => [...prev, newmess]);
             allMessages();
-          }
+          // }
         } catch (error) {
           console.log(error);
         }
