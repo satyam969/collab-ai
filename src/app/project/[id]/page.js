@@ -93,12 +93,15 @@ const MessageBubble = styled(Card)(({ isuser }) => ({
 }));
 
 const Projects = () => {
+  const { id } = useParams();
   const [runProcess, setRunProcess] = useState(null);
   const [open, setOpen] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [createPath, setCreatePath] = useState("Root");
   const [newItemName, setNewItemName] = useState("");
   const [newItemType, setNewItemType] = useState("file");
+  const [projectType, setProjectType] = useState("react");
+  const [isClient, setIsClient] = useState(false);
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
   const handleCreateModalOpen = (path, type = "file") => {
@@ -127,7 +130,6 @@ const Projects = () => {
   const [addedUsers, setAddedUsers] = useState([]);
   const [searchuser, setSearchUser] = useState([]);
   const { data: session, status } = useSession();
-  const { id } = useParams();
   const [clickCount, setClickCount] = useState(1);
   const messageContainerRef = useRef(null);
   const [expandedDirs, setExpandedDirs] = useState({});
@@ -779,6 +781,44 @@ const Projects = () => {
     });
   };
 
+  // Set isClient to true after component mounts
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  // Load and save project type
+  useEffect(() => {
+    if (isClient) {
+      // Load from localStorage
+      const storedType = localStorage.getItem(`projectType_${id}`);
+      if (storedType) {
+        setProjectType(storedType);
+      }
+
+      // Save to localStorage when it changes
+      const handleStorageChange = () => {
+        localStorage.setItem(`projectType_${id}`, projectType);
+      };
+
+      // Add event listener for storage changes
+      window.addEventListener('storage', handleStorageChange);
+
+      // Cleanup
+      return () => {
+        window.removeEventListener('storage', handleStorageChange);
+      };
+    }
+  }, [projectType, id, isClient]);
+
+  // Handle project type change
+  const handleProjectTypeChange = (e) => {
+    const newType = e.target.value;
+    setProjectType(newType);
+    if (isClient) {
+      localStorage.setItem(`projectType_${id}`, newType);
+    }
+  };
+
   return (
     <Container
       maxWidth={false}
@@ -1074,7 +1114,31 @@ const Projects = () => {
             sx={{ color: "#d4d4d4", fontSize: "16px", fontWeight: 500 }}
           >
             File Tree
-            <Box sx={{ display: "flex", gap: 1 }}>
+            <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+              <FormControl sx={{ minWidth: 120, mr: 1 }}>
+                <InputLabel sx={{ color: "#888" }}>Project Type</InputLabel>
+                <Select
+                  value={projectType}
+                  onChange={handleProjectTypeChange}
+                  sx={{
+                    color: "#d4d4d4",
+                    backgroundColor: "#1e1e1e",
+                    "& .MuiOutlinedInput-notchedOutline": {
+                      borderColor: "#444",
+                    },
+                    "&:hover .MuiOutlinedInput-notchedOutline": {
+                      borderColor: "#666",
+                    },
+                    "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                      borderColor: "#4fc1ff",
+                    },
+                  }}
+                >
+                  <MenuItem value="react">React.js</MenuItem>
+                  <MenuItem value="next">Next.js</MenuItem>
+                  <MenuItem value="express">Express.js</MenuItem>
+                </Select>
+              </FormControl>
               <Button
                 onClick={async () => {
                   await webContainer.mount(fileTree);
@@ -1091,9 +1155,22 @@ const Projects = () => {
                   if (runProcess) {
                     runProcess.kill();
                   }
-                  let tempRunProcess = await webContainer.spawn("npm", [
-                    "start",
-                  ]);
+                  
+                  let tempRunProcess;
+                  switch (projectType) {
+                    case "react":
+                      tempRunProcess = await webContainer.spawn("npm", ["run", "dev"]);
+                      break;
+                    case "next":
+                      tempRunProcess = await webContainer.spawn("npm", ["run", "dev"]);
+                      break;
+                    case "express":
+                      tempRunProcess = await webContainer.spawn("npm", ["start"]);
+                      break;
+                    default:
+                      tempRunProcess = await webContainer.spawn("npm", ["run", "dev"]);
+                  }
+                  
                   tempRunProcess.output.pipeTo(
                     new WritableStream({
                       write(chunk) {

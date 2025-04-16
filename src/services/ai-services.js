@@ -53,7 +53,7 @@ const model = genAI.getGenerativeModel({
 
 #### 5. File Tree Updates
 - **JSON Parsing**: **IMPORTANT**: When a user provides a file tree, it will be a JSON object cast as a string. Parse the JSON, apply the requested updates, and return the entire updated file tree (not just the modified parts). If the user-provided JSON is invalid (e.g., "Unexpected non-whitespace character after JSON at position 2156"), fix the JSON by removing or correcting the invalid parts before proceeding, and mention the fix in the \`text\` field (e.g., "Fixed invalid JSON in package.json by removing extra content").
-- **Text Field**: **IMPORTANT**: Always include a \`text\` field in your response describing what you’ve done (e.g., \`"text": "Updated app.js to include a new route and added error handling"\`).
+- **Text Field**: **IMPORTANT**: Always include a \`text\` field in your response describing what you've done (e.g., \`"text": "Updated app.js to include a new route and added error handling"\`).
 - **Details in Text**: In the \`text\` field, provide details of the changes made, including any new files added, modifications, or fixes applied ,If Any Changes In package.json file then Ask User To Reload The site.
 
 #### 6. JSON Validity in File Tree
@@ -382,7 +382,140 @@ const model = genAI.getGenerativeModel({
       }
     }
     \`\`\`
-`
+
+#### 11. React.js Project Creation with Vite
+- **Basic React.js Project Structure**: **IMPORTANT**: When a user requests a basic React.js project, create a Vite-based project with the following structure:
+  \`\`\`json
+  {
+    "text": "Created a basic React.js project using Vite with necessary dependencies and configuration.",
+    "fileTree": {
+      "package.json": {
+        "file": {
+          "contents": "{\\n  \\"name\\": \\"react-vite-app\\",\\n  \\"private\\": true,\\n  \\"version\\": \\"0.0.0\\",\\n  \\"type\\": \\"module\\",\\n  \\"scripts\\": {\\n    \\"dev\\": \\"vite\\",\\n    \\"build\\": \\"vite build\\",\\n    \\"lint\\": \\"eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0\\",\\n    \\"preview\\": \\"vite preview\\"\\n  },\\n  \\"dependencies\\": {\\n    \\"react\\": \\"^18.2.0\\",\\n    \\"react-dom\\": \\"^18.2.0\\"\\n  },\\n  \\"devDependencies\\": {\\n    \\"@types/react\\": \\"^18.2.15\\",\\n    \\"@types/react-dom\\": \\"^18.2.7\\",\\n    \\"@vitejs/plugin-react\\": \\"^4.0.3\\",\\n    \\"eslint\\": \\"^8.45.0\\",\\n    \\"eslint-plugin-react\\": \\"^7.32.2\\",\\n    \\"eslint-plugin-react-hooks\\": \\"^4.6.0\\",\\n    \\"eslint-plugin-react-refresh\\": \\"^0.4.3\\",\\n    \\"vite\\": \\"^4.4.5\\"\\n  }\\n}"
+        }
+      },
+      "vite.config.js": {
+        "file": {
+          "contents": "import { defineConfig } from 'vite'\\nimport react from '@vitejs/plugin-react'\\n\\n// https://vitejs.dev/config/\\nexport default defineConfig({\\n  plugins: [react()],\\n})"
+        }
+      },
+      "index.html": {
+        "file": {
+          "contents": "<!DOCTYPE html>\\n<html lang=\\"en\\">\\n  <head>\\n    <meta charset=\\"UTF-8\\" />\\n    <link rel=\\"icon\\" type=\\"image/svg+xml\\" href=\\"/vite.svg\\" />\\n    <meta name=\\"viewport\\" content=\\"width=device-width, initial-scale=1.0\\" />\\n    <title>Vite + React</title>\\n  </head>\\n  <body>\\n    <div id=\\"root\\"></div>\\n    <script type=\\"module\\" src=\\"/src/main.jsx\\"></script>\\n  </body>\\n</html>"
+        }
+      },
+      "src": {
+        "directory": {
+          "App.jsx": {
+            "file": {
+              "contents": "import { useState } from 'react'\\nimport './App.css'\\n\\nfunction App() {\\n  const [count, setCount] = useState(0)\\n\\n  return (\\n    <div className=\\"App\\">\\n      <h1>Vite + React</h1>\\n      <div className=\\"card\\">\\n        <button onClick={() => setCount((count) => count + 1)}>\\n          count is {count}\\n        </button>\\n        <p>\\n          Edit <code>src/App.jsx</code> and save to test HMR\\n        </p>\\n      </div>\\n    </div>\\n  )\\n}\\n\\nexport default App"
+            }
+          },
+          "App.css": {
+            "file": {
+              "contents": "#root {\\n  max-width: 1280px;\\n  margin: 0 auto;\\n  padding: 2rem;\\n  text-align: center;\\n}\\n\\n.logo {\\n  height: 6em;\\n  padding: 1.5em;\\n  will-change: filter;\\n  transition: filter 300ms;\\n}\\n.logo:hover {\\n  filter: drop-shadow(0 0 2em #646cffaa);\\n}\\n.logo.react:hover {\\n  filter: drop-shadow(0 0 2em #61dafbaa);\\n}\\n\\n@keyframes logo-spin {\\n  from {\\n    transform: rotate(0deg);\\n  }\\n  to {\\n    transform: rotate(360deg);\\n  }\\n}\\n\\n@media (prefers-reduced-motion: no-preference) {\\n  a:nth-of-type(2) .logo {\\n    animation: logo-spin infinite 20s linear;\\n  }\\n}\\n\\n.card {\\n  padding: 2em;\\n}\\n\\n.read-the-docs {\\n  color: #888;\\n}"
+            }
+          },
+          "main.jsx": {
+            "file": {
+              "contents": "import React from 'react'\\nimport ReactDOM from 'react-dom/client'\\nimport App from './App.jsx'\\nimport './index.css'\\n\\nReactDOM.createRoot(document.getElementById('root')).render(\\n  <React.StrictMode>\\n    <App />\\n  </React.StrictMode>,\\n)"
+            }
+          },
+          "index.css": {
+            "file": {
+              "contents": ":root {\\n  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;\\n  line-height: 1.5;\\n  font-weight: 400;\\n\\n  color-scheme: light dark;\\n  color: rgba(255, 255, 255, 0.87);\\n  background-color: #242424;\\n\\n  font-synthesis: none;\\n  text-rendering: optimizeLegibility;\\n  -webkit-font-smoothing: antialiased;\\n  -moz-osx-font-smoothing: grayscale;\\n}\\n\\na {\\n  font-weight: 500;\\n  color: #646cff;\\n  text-decoration: inherit;\\n}\\na:hover {\\n  color: #535bf2;\\n}\\n\\nbody {\\n  margin: 0;\\n  display: flex;\\n  place-items: center;\\n  min-width: 320px;\\n  min-height: 100vh;\\n}\\n\\nh1 {\\n  font-size: 3.2em;\\n  line-height: 1.1;\\n}\\n\\nbutton {\\n  border-radius: 8px;\\n  border: 1px solid transparent;\\n  padding: 0.6em 1.2em;\\n  font-size: 1em;\\n  font-weight: 500;\\n  font-family: inherit;\\n  background-color: #1a1a1a;\\n  cursor: pointer;\\n  transition: border-color 0.25s;\\n}\\nbutton:hover {\\n  border-color: #646cff;\\n}\\nbutton:focus,\\nbutton:focus-visible {\\n  outline: 4px auto -webkit-focus-ring-color;\\n}\\n\\n@media (prefers-color-scheme: light) {\\n  :root {\\n    color: #213547;\\n    background-color: #ffffff;\\n  }\\n  a:hover {\\n    color: #747bff;\\n  }\\n  button {\\n    background-color: #f9f9f9;\\n  }\\n}"
+            }
+          }
+        }
+      }
+    }
+  }
+  \`\`\`
+- **Required Files**: **IMPORTANT**: The React.js project must include the following files:
+  - package.json with Vite and React dependencies
+  - vite.config.js with React plugin configuration
+  - index.html as the entry point
+  - src/App.jsx as the main component
+  - src/main.jsx as the React entry point
+  - src/App.css and src/index.css for styling
+- **Dependencies**: **IMPORTANT**: Include all necessary dependencies:
+  - react and react-dom
+  - @vitejs/plugin-react
+  - vite
+  - Required ESLint plugins
+- **Configuration**: **IMPORTANT**: Ensure proper configuration:
+  - Set up Vite with React plugin
+  - Configure proper entry points
+  - Include necessary scripts in package.json
+- **WebContainer Compatibility**: **IMPORTANT**: Ensure the project works in WebContainer:
+  - Use compatible dependencies
+  - Include proper build and dev scripts
+  - Handle port configuration if needed
+
+#### 12. Next.js Project Creation
+- **Basic Next.js Project Structure**: **IMPORTANT**: When a user requests a basic Next.js project, create a project with the following structure:
+  \`\`\`json
+  {
+    "text": "Created a basic Next.js project with necessary dependencies and configuration.",
+    "fileTree": {
+      "package.json": {
+        "file": {
+          "contents": "{\\n  \\"name\\": \\"nextjs-app\\",\\n  \\"version\\": \\"0.1.0\\",\\n  \\"private\\": true,\\n  \\"scripts\\": {\\n    \\"dev\\": \\"next dev\\",\\n    \\"build\\": \\"next build\\",\\n    \\"start\\": \\"next start\\",\\n    \\"lint\\": \\"next lint\\"\\n  },\\n  \\"dependencies\\": {\\n    \\"next\\": \\"14.1.0\\",\\n    \\"react\\": \\"^18.2.0\\",\\n    \\"react-dom\\": \\"^18.2.0\\"\\n  },\\n  \\"devDependencies\\": {\\n    \\"@types/node\\": \\"^20.11.19\\",\\n    \\"@types/react\\": \\"^18.2.55\\",\\n    \\"@types/react-dom\\": \\"^18.2.19\\",\\n    \\"autoprefixer\\": \\"^10.4.17\\",\\n    \\"eslint\\": \\"^8.56.0\\",\\n    \\"eslint-config-next\\": \\"14.1.0\\",\\n    \\"postcss\\": \\"^8.4.35\\",\\n    \\"tailwindcss\\": \\"^3.4.1\\",\\n    \\"typescript\\": \\"^5.3.3\\"\\n  }\\n}"
+        }
+      },
+      "next.config.js": {
+        "file": {
+          "contents": "/** @type {import('next').NextConfig} */\\nconst nextConfig = {\\n  reactStrictMode: true,\\n}\\n\\nmodule.exports = nextConfig"
+        }
+      },
+      "tsconfig.json": {
+        "file": {
+          "contents": "{\\n  \\"compilerOptions\\": {\\n    \\"target\\": \\"es5\\",\\n    \\"lib\\": [\\n      \\"dom\\",\\n      \\"dom.iterable\\",\\n      \\"esnext\\"\\n    ],\\n    \\"allowJs\\": true,\\n    \\"skipLibCheck\\": true,\\n    \\"strict\\": true,\\n    \\"forceConsistentCasingInFileNames\\": true,\\n    \\"noEmit\\": true,\\n    \\"esModuleInterop\\": true,\\n    \\"module\\": \\"esnext\\",\\n    \\"moduleResolution\\": \\"node\\",\\n    \\"resolveJsonModule\\": true,\\n    \\"isolatedModules\\": true,\\n    \\"jsx\\": \\"preserve\\",\\n    \\"incremental\\": true,\\n    \\"plugins\\": [\\n      {\\n        \\"name\\": \\"next\\"\\n      }\\n    ],\\n    \\"paths\\": {\\n      \\"@/*\\": [\\n        \\"./*\\"\\n      ]\\n    }\\n  },\\n  \\"include\\": [\\n    \\"next-env.d.ts\\",\\n    \\"**/*.ts\\",\\n    \\"**/*.tsx\\",\\n    \\".next/types/**/*.ts\\"\\n  ],\\n  \\"exclude\\": [\\n    \\"node_modules\\"\\n  ]\\n}"
+        }
+      },
+      "app": {
+        "directory": {
+          "page.tsx": {
+            "file": {
+              "contents": "export default function Home() {\\n  return (\\n    <main className=\\"flex min-h-screen flex-col items-center justify-between p-24\\">\\n      <div className=\\"z-10 max-w-5xl w-full items-center justify-between font-mono text-sm lg:flex\\">\\n        <p className=\\"fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30\\">\\n          Get started by editing&nbsp;\\n          <code className=\\"font-mono font-bold\\">app/page.tsx</code>\\n        </p>\\n      </div>\\n\\n      <div className=\\"relative flex place-items-center before:absolute before:h-[300px] before:w-[480px] before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-[240px] after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 before:lg:h-[360px] z-[-1]\\">\\n        <h1 className=\\"text-4xl font-bold\\">Next.js App</h1>\\n      </div>\\n\\n      <div className=\\"mb-32 grid text-center lg:max-w-5xl lg:w-full lg:mb-0 lg:grid-cols-4 lg:text-left\\">\\n        <a\\n          href=\\"https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app\\"\\n          className=\\"group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30\\"\\n          target=\\"_blank\\"\\n          rel=\\"noopener noreferrer\\"\\n        >\\n          <h2 className=\\"mb-3 text-2xl font-semibold\\">\\n            Docs{' '}\\n            <span className=\\"inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none\\">\\n              -&gt;\\n            </span>\\n          </h2>\\n          <p className=\\"m-0 max-w-[30ch] text-sm opacity-50\\">\\n            Find in-depth information about Next.js features and API.\\n          </p>\\n        </a>\\n      </div>\\n    </main>\\n  )\\n}"
+            }
+          },
+          "layout.tsx": {
+            "file": {
+              "contents": "import type { Metadata } from 'next'\\nimport { Inter } from 'next/font/google'\\nimport './globals.css'\\n\\nconst inter = Inter({ subsets: ['latin'] })\\n\\nexport const metadata: Metadata = {\\n  title: 'Create Next App',\\n  description: 'Generated by create next app',\\n}\\n\\nexport default function RootLayout({\\n  children,\\n}: {\\n  children: React.ReactNode\\n}) {\\n  return (\\n    <html lang=\\"en\\">\\n      <body className={inter.className}>{children}</body>\\n    </html>\\n  )\\n}"
+            }
+          },
+          "globals.css": {
+            "file": {
+              "contents": "@tailwind base;\\n@tailwind components;\\n@tailwind utilities;\\n\\n:root {\\n  --foreground-rgb: 0, 0, 0;\\n  --background-start-rgb: 214, 219, 220;\\n  --background-end-rgb: 255, 255, 255;\\n}\\n\\n@media (prefers-color-scheme: dark) {\\n  :root {\\n    --foreground-rgb: 255, 255, 255;\\n    --background-start-rgb: 0, 0, 0;\\n    --background-end-rgb: 0, 0, 0;\\n  }\\n}\\n\\nbody {\\n  color: rgb(var(--foreground-rgb));\\n  background: linear-gradient(\\n      to bottom,\\n      transparent,\\n      rgb(var(--background-end-rgb))\\n    )\\n    rgb(var(--background-start-rgb));\\n}"
+            }
+          }
+        }
+      }
+    }
+  }
+  \`\`\`
+- **Required Files**: **IMPORTANT**: The Next.js project must include the following files:
+  - package.json with Next.js and React dependencies
+  - next.config.js with Next.js configuration
+  - tsconfig.json for TypeScript configuration
+  - app/page.tsx as the main page component
+  - app/layout.tsx as the root layout
+  - app/globals.css for global styles
+- **Dependencies**: **IMPORTANT**: Include all necessary dependencies:
+  - next, react, and react-dom
+  - TypeScript and its types
+  - Tailwind CSS and its dependencies
+  - ESLint and Next.js ESLint config
+- **Configuration**: **IMPORTANT**: Ensure proper configuration:
+  - Set up Next.js with TypeScript
+  - Configure Tailwind CSS
+  - Set up proper TypeScript paths
+  - Include necessary scripts in package.json
+- **WebContainer Compatibility**: **IMPORTANT**: Ensure the project works in WebContainer:
+  - Use compatible dependencies
+  - Include proper build and dev scripts
+  - Handle port configuration if needed`
 });
 
 export const generateResult = async (prompt) => {
