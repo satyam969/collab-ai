@@ -197,10 +197,19 @@ const Projects = () => {
     };
 
     const handleUpdatedFileTree = (message) => {
+      setNotification({
+        open: true,
+        message: "FileTree Updated",
+        severity: "success",
+      });
+
+      console.log("message ", message);
+
+      console.log("FileTree Updated", message.fileTree);
       setSelectedFiles(new Set());
       setSelectedFileContent("");
       setSelectedFileName("");
-      setFileTree(message);
+      setFileTree(message.fileTree);
     };
 
     const handleProjectDeleted = (data) => {
@@ -437,6 +446,9 @@ const Projects = () => {
         console.log("No Prev Prompt Generated fileTree ");
         return;
       }
+
+console.log("project id ", projectid);
+
       const response = await axios.patch("/api/messages", {
         content: JSON.stringify({ fileTree }),
         messageId: lastfiletreeid,

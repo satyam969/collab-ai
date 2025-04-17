@@ -43,11 +43,11 @@ export const PATCH=async(req)=>{
         
           const body = await req.json(); 
 
-          console.log(body);
+        //   console.log(body);
 
           const result = await updateMessage(body);
 
-          console.log(result);
+        //   console.log(result);
 
         return NextResponse.json({ message: 'Patch request received',result }, { status: 200 });
         

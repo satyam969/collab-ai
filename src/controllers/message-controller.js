@@ -104,23 +104,43 @@ const allMessages = async ({ chatId }) => {
 
 const updateMessage = async (body) => {
   try {
+
+console.log(" We Are In Update Message ");
+
+
+
     const { messageId, content } = body;
 
+    
     if (!messageId) {
       throw new Error("Invalid Data: 'id' is required.");
     }
-
+    
     if (!content) {
       throw new Error("Invalid Data: 'content' is required.");
     }
-
+    
     const messageai = await Message.findOne({ _id: messageId });
+
+    // console.log(" messageai ", messageai);
+    
+    // console.log(" project id ", messageai.chat);
+
+    // 6800a33a0f744015216b1b49
 
     if (!messageai) {
       throw new Error("Invalid Data: No message found with this id.");
     }
 
-    if (messageai.sender === process.env.AI_USER_ID) {
+    // Convert both to string for comparison
+    const senderId = messageai.sender.toString();
+    const aiUserId = process.env.AI_USER_ID.toString();
+    
+    console.log("Sender ID:", senderId);
+    console.log("AI User ID:", aiUserId);
+    console.log("verify ", senderId === aiUserId);
+
+    if (senderId === aiUserId) {
       const data = JSON.parse(messageai.content);
       if (!data.fileTree) {
         throw new Error("Invalid Data: No file tree found in AI response.");
@@ -131,8 +151,12 @@ const updateMessage = async (body) => {
       if (nfiletree.fileTree !== data.fileTree) {
         data.fileTree = nfiletree.fileTree;
 
+        console.log(" nfiletree ", nfiletree);
+
+        console.log(" project id ", messageai.chat);
+
         await pusherServer.trigger(
-          `${messageai.chat}`,
+          `project-${messageai.chat}`,
           "updatedfiletree",
           nfiletree
         );
