@@ -1,36 +1,158 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Collab-AI: AI-Powered Collaborative Development Environment
 
-## Getting Started
+Collab-AI is a modern web application that combines real-time collaboration features with AI-powered code generation and assistance. Built with Next.js, it provides a seamless development experience with features like real-time code editing, AI code suggestions, and project management.
 
-First, run the development server:
+## Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+### Core Features
+- Real-time collaborative code editing
+- AI-powered code generation and assistance
+- Project management and file organization
+- Multiple project type support (React.js, Next.js, Express.js)
+- Real-time chat with AI assistance
+- User authentication and authorization
+- File tree management with create/delete operations
+- Code editor with syntax highlighting
+- Live project preview
+
+### Technical Features
+- WebContainer integration for running code in the browser
+- Real-time updates using Pusher
+- MongoDB for data persistence
+- NextAuth.js for authentication
+- Material-UI for modern UI components
+- Tailwind CSS for styling
+- TypeScript support
+- Responsive design
+
+## Prerequisites
+
+- Node.js (v18 or higher)
+- MongoDB Atlas account
+- Pusher account
+- Google API key (for authentication)
+
+## Environment Variables
+
+Create a `.env` file in the root directory with the following variables:
+
+```env
+# MongoDB Configuration
+MONGODB_URl="your_mongodb_connection_string"
+
+# JWT Configuration
+JWT_SECRET="your_jwt_secret"
+
+# Google Authentication
+GOOGLE_API_KEY="your_google_api_key"
+
+# NextAuth Configuration
+NEXTAUTH_SECRET="your_nextauth_secret"
+NEXTAUTH_URL="http://localhost:3000"
+
+<!-- create a ai user that wouuld be responsible for the messages from ai  -->
+# AI Configuration
+AI_USER_ID="your_ai_user_id"
+NEXT_PUBLIC_AI="your_ai_user_id"
+
+# Pusher Configuration
+PUSHER_APP_ID="your_pusher_app_id"
+PUSHER_KEY="your_pusher_key"
+PUSHER_SECRET="your_pusher_secret"
+PUSHER_CLUSTER="your_pusher_cluster"
+NEXT_PUBLIC_PUSHER_KEY="your_pusher_key"
+NEXT_PUBLIC_PUSHER_CLUSTER="your_pusher_cluster"
+
+# Environment
+NODE_ENV="development"
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Installation
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+1. Clone the repository:
+```bash
+git clone https://github.com/yourusername/collab-ai.git
+cd collab-ai
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+2. Install dependencies:
+```bash
+npm install
+```
 
-## Learn More
+3. Set up environment variables:
+- Copy the `.env.example` file to `.env`
+- Fill in all required environment variables
 
-To learn more about Next.js, take a look at the following resources:
+4. Start the development server:
+```bash
+npm run dev
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+The application will be available at `http://localhost:3000`
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Project Structure
 
-## Deploy on Vercel
+```
+collab-ai/
+├── src/
+│   ├── app/                 # Next.js app directory
+│   ├── components/          # React components
+│   ├── controllers/         # API controllers
+│   ├── lib/                 # Utility functions and configurations
+│   ├── models/              # MongoDB models
+│   ├── services/            # Business logic and services
+│   └── styles/              # Global styles
+├── public/                  # Static assets
+├── .env                     # Environment variables
+├── next.config.mjs          # Next.js configuration
+├── tailwind.config.mjs      # Tailwind CSS configuration
+└── package.json             # Project dependencies
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Available Scripts
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `npm run dev` - Start development server
+- `npm run build` - Build production application
+- `npm start` - Start production server
+- `npm run lint` - Run ESLint
+
+## Dependencies
+
+### Core Dependencies
+- Next.js 15.1.3
+- React 19.0.0
+- MongoDB 8.9.3
+- Pusher 5.2.0
+- Material-UI 6.3.0
+- Tailwind CSS 3.4.1
+
+### Development Dependencies
+- JavaScript
+- ESLint
+- PostCSS
+- Tailwind CSS
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Support
+
+For support, email your-email@example.com or open an issue in the GitHub repository.
+
+## Acknowledgments
+
+- Next.js team for the amazing framework
+- MongoDB for the database solution
+- Pusher for real-time functionality
+- Material-UI for the UI components
+- All contributors who have helped shape this project
