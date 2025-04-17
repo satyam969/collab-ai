@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import {
   AppBar,
@@ -49,8 +51,8 @@ const Navbar = () => {
           Collab AI
         </Typography>
         <StyledButton onClick={() => navigateTo("/")}>Home</StyledButton>
-        <StyledButton onClick={() => navigateTo("/projects")}>
-          Projects
+        <StyledButton onClick={() => navigateTo("/docs")}>
+          Documentation
         </StyledButton>
 
         {status === "authenticated" && (

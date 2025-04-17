@@ -130,7 +130,7 @@ const Projects = () => {
   const [addedUsers, setAddedUsers] = useState([]);
   const [searchuser, setSearchUser] = useState([]);
   const { data: session, status } = useSession();
-  const [clickCount, setClickCount] = useState(1);
+  const [clickCount, setClickCount] = useState(0);
   const messageContainerRef = useRef(null);
   const [expandedDirs, setExpandedDirs] = useState({});
   const [notification, setNotification] = useState({
@@ -142,7 +142,7 @@ const Projects = () => {
   const handleClickbuton = () => {
     if (clickCount == 1) {
       setTimeout(() => {
-        setClickCount((prevCount) => (prevCount + 1) % 2);
+        setClickCount((prevCount) => (prevCount + 1) % 3);
       }, 6000);
     }
   };
@@ -341,7 +341,15 @@ const Projects = () => {
     if (!file) {
       return;
     }
-    setSelectedFiles((prev) => new Set(prev).add(filePath));
+    // If the file is already selected, deselect it
+    if (selectedFileName === filePath) {
+      setSelectedFiles(new Set());
+      setSelectedFileContent("");
+      setSelectedFileName("");
+      return;
+    }
+    // Select the new file
+    setSelectedFiles(new Set([filePath]));
     setSelectedFileContent(file.file.contents);
     setSelectedFileName(filePath);
   };
@@ -524,62 +532,89 @@ console.log("project id ", projectid);
     handleCreateModalClose();
   };
 
-  const handleDeleteItem = (path, isDirectory) => {
-    setFileTree((prevFileTree) => {
-      const newFileTree = JSON.parse(JSON.stringify(prevFileTree));
-      let target = newFileTree;
-      const pathParts = path.split("/");
-      const itemName = pathParts.pop();
+  const handleDeleteItem = async (path, isDirectory) => {
+    try {
+      const newFileTree = await new Promise((resolve) => {
+        setFileTree((prevFileTree) => {
+          const newFileTree = JSON.parse(JSON.stringify(prevFileTree));
+          let target = newFileTree;
+          const pathParts = path.split("/");
+          const itemName = pathParts.pop();
 
-      for (let part of pathParts) {
-        if (!target[part] || !target[part].directory) {
-          console.error(`Path ${part} does not exist or is not a directory.`);
-          return prevFileTree;
-        }
-        target = target[part].directory;
+          for (let part of pathParts) {
+            if (!target[part] || !target[part].directory) {
+              console.error(`Path ${part} does not exist or is not a directory.`);
+              return prevFileTree;
+            }
+            target = target[part].directory;
+          }
+
+          if (target[itemName]) {
+            if (isDirectory && !target[itemName].directory) {
+              console.error(`Item at ${path} is not a directory.`);
+              return prevFileTree;
+            }
+            if (!isDirectory && !target[itemName].file) {
+              console.error(`Item at ${path} is not a file.`);
+              return prevFileTree;
+            }
+            delete target[itemName];
+            if (!isDirectory && selectedFileName === path) {
+              setSelectedFileContent("");
+              setSelectedFileName("");
+              setSelectedFiles((prev) => {
+                const newSet = new Set(prev);
+                newSet.delete(path);
+                return newSet;
+              });
+            }
+            if (isDirectory && selectedFileName.startsWith(path)) {
+              setSelectedFileContent("");
+              setSelectedFileName("");
+              setSelectedFiles((prev) => {
+                const newSet = new Set(prev);
+                newSet.forEach((filePath) => {
+                  if (filePath.startsWith(path)) {
+                    newSet.delete(filePath);
+                  }
+                });
+                return newSet;
+              });
+            }
+          } else {
+            console.error(`Item at ${path} does not exist.`);
+            return prevFileTree;
+          }
+
+          resolve(newFileTree);
+          return newFileTree;
+        });
+      });
+
+      // Save changes with the updated fileTree
+      if (!lastfiletreeid) {
+        console.error("No previous fileTree message ID found");
+        return;
       }
 
-      if (target[itemName]) {
-        if (isDirectory && !target[itemName].directory) {
-          console.error(`Item at ${path} is not a directory.`);
-          return prevFileTree;
-        }
-        if (!isDirectory && !target[itemName].file) {
-          console.error(`Item at ${path} is not a file.`);
-          return prevFileTree;
-        }
-        delete target[itemName];
-        if (!isDirectory && selectedFileName === path) {
-          setSelectedFileContent("");
-          setSelectedFileName("");
-          setSelectedFiles((prev) => {
-            const newSet = new Set(prev);
-            newSet.delete(path);
-            return newSet;
-          });
-        }
-        if (isDirectory && selectedFileName.startsWith(path)) {
-          setSelectedFileContent("");
-          setSelectedFileName("");
-          setSelectedFiles((prev) => {
-            const newSet = new Set(prev);
-            newSet.forEach((filePath) => {
-              if (filePath.startsWith(path)) {
-                newSet.delete(filePath);
-              }
-            });
-            return newSet;
-          });
-        }
-      } else {
-        console.error(`Item at ${path} does not exist.`);
-        return prevFileTree;
-      }
+      await axios.patch("/api/messages", {
+        content: JSON.stringify({ fileTree: newFileTree }),
+        messageId: lastfiletreeid,
+      });
 
-      return newFileTree;
-    });
-
-    handleSave();
+      setNotification({
+        open: true,
+        message: `Successfully deleted ${isDirectory ? "folder" : "file"}`,
+        severity: "success",
+      });
+    } catch (error) {
+      console.error("Error deleting item:", error);
+      setNotification({
+        open: true,
+        message: `Failed to delete ${isDirectory ? "folder" : "file"}`,
+        severity: "error",
+      });
+    }
   };
 
   const RenderFileTree = ({ tree, parentPath = "" }) => {
@@ -715,15 +750,16 @@ console.log("project id ", projectid);
                   alignItems: "center",
                   padding: "4px 8px",
                   borderRadius: "4px",
-                  transition: "background-color 0.2s ease",
+                  transition: "all 0.2s ease",
+                  backgroundColor: selectedFileName === currentPath ? "#37373d" : "transparent",
                   "&:hover": {
-                    backgroundColor: "#2a2d2e",
+                    backgroundColor: selectedFileName === currentPath ? "#37373d" : "#2a2d2e",
                   },
                 }}
               >
                 <InsertDriveFileIcon
                   sx={{
-                    color: "#4fc1ff",
+                    color: selectedFileName === currentPath ? "#ffffff" : "#4fc1ff",
                     marginRight: "8px",
                     fontSize: "18px",
                   }}
@@ -732,9 +768,10 @@ console.log("project id ", projectid);
                   onClick={() => handleSelectFile(item, currentPath)}
                   sx={{
                     flexGrow: 1,
-                    color: "#d4d4d4",
+                    color: selectedFileName === currentPath ? "#ffffff" : "#d4d4d4",
                     fontSize: "14px",
                     cursor: "pointer",
+                    fontWeight: selectedFileName === currentPath ? 600 : 400,
                     "&:hover": {
                       color: "#ffffff",
                     },
@@ -1153,26 +1190,78 @@ console.log("project id ", projectid);
               </FormControl>
               <Button
                 onClick={async () => {
+                  // await webContainer.mount(fileTree);
+                  // const installProcess = await webContainer.spawn("npm", [
+                  //   "install",
+                  // ]);
+                  // installProcess.output.pipeTo(
+                  //   new WritableStream({
+                  //     write(chunk) {
+                  //       console.log(chunk);
+                  //     },
+                  //   })
+                  // );
+                  // if (runProcess) {
+                  //   runProcess.kill();
+                  // }
+                  
+                  // let tempRunProcess;
+                  // switch (projectType) {
+                  //   case "react":
+                  //     tempRunProcess = await webContainer.spawn("npm", ["run", "dev"]);
+                  //     break;
+                  //   case "next":
+                  //     tempRunProcess = await webContainer.spawn("npm", ["run", "dev"]);
+                  //     break;
+                  //   case "express":
+                  //     tempRunProcess = await webContainer.spawn("npm", ["start"]);
+                  //     break;
+                  //   default:
+                  //     tempRunProcess = await webContainer.spawn("npm", ["run", "dev"]);
+                  // }
+                  
+                  // tempRunProcess.output.pipeTo(
+                  //   new WritableStream({
+                  //     write(chunk) {
+                  //       console.log(chunk);
+                  //     },
+                  //   })
+                  // );
+                  // setRunProcess(tempRunProcess);
+                  // webContainer.on("server-ready", (port, url) => {
+                  //   console.log(port, url);
+                  //   setUrl(url);
+                  // });
+                  // handleClickbuton();
+
+                  setClickCount(1); // Installing...
+
                   await webContainer.mount(fileTree);
-                  const installProcess = await webContainer.spawn("npm", [
-                    "install",
-                  ]);
+                
+                  const installProcess = await webContainer.spawn("npm", ["install"]);
                   installProcess.output.pipeTo(
                     new WritableStream({
                       write(chunk) {
-                        console.log(chunk);
+                        // console.log(chunk);
                       },
                     })
                   );
+                
+                  const exitCode = await installProcess.exit;
+                  if (exitCode !== 0) {
+                    console.error("❌ Install failed.");
+                    return;
+                  }
+                
+                  setClickCount(2); // Switch to Run
+                
                   if (runProcess) {
                     runProcess.kill();
                   }
-                  
+                
                   let tempRunProcess;
                   switch (projectType) {
                     case "react":
-                      tempRunProcess = await webContainer.spawn("npm", ["run", "dev"]);
-                      break;
                     case "next":
                       tempRunProcess = await webContainer.spawn("npm", ["run", "dev"]);
                       break;
@@ -1182,7 +1271,7 @@ console.log("project id ", projectid);
                     default:
                       tempRunProcess = await webContainer.spawn("npm", ["run", "dev"]);
                   }
-                  
+                
                   tempRunProcess.output.pipeTo(
                     new WritableStream({
                       write(chunk) {
@@ -1190,12 +1279,14 @@ console.log("project id ", projectid);
                       },
                     })
                   );
+                
                   setRunProcess(tempRunProcess);
+                
                   webContainer.on("server-ready", (port, url) => {
                     console.log(port, url);
                     setUrl(url);
                   });
-                  handleClickbuton();
+
                 }}
                 sx={{
                   color: "#4fc1ff",
@@ -1206,7 +1297,9 @@ console.log("project id ", projectid);
                   },
                 }}
               >
-                {clickCount === 0 ? "Run" : "Install"}
+                {/* {clickCount === 0 ? "Run" : "Install"} */}
+                {clickCount === 0 ? "Install" : clickCount === 1 ? "Installing..." : "Run"}
+
               </Button>
             </Box>
             <Modal
@@ -1304,7 +1397,7 @@ console.log("project id ", projectid);
               flexDirection: "column",
               overflowX: "auto",
               overflowY: "auto",
-              maxHeight: "200px",
+              flex: "0 1 auto",
               margin: "8px 0",
               backgroundColor: "#252526",
               padding: "8px",
@@ -1325,13 +1418,16 @@ console.log("project id ", projectid);
           </Box>
           <Box
             sx={{
-              flex: 1,
+              flex: "1 1 auto",
               padding: "12px",
               backgroundColor: "#1e1e1e",
               borderRadius: "4px",
               color: "#d4d4d4",
               overflow: "auto",
               margin: "0 16px 16px 16px",
+              display: "flex",
+              flexDirection: "column",
+              minHeight: 0,
               fontFamily: '"Fira Code", monospace',
               fontSize: "14px",
               lineHeight: "1.5",
@@ -1367,7 +1463,7 @@ console.log("project id ", projectid);
                   }}
                   style={{
                     width: "100%",
-                    height: "400px",
+                    height: "900px",
                     borderRadius: "4px",
                     fontFamily: '"Fira Code", monospace',
                     fontSize: "14px",
@@ -1376,7 +1472,7 @@ console.log("project id ", projectid);
                 <Button
                   onClick={handleSave}
                   sx={{
-                    mt: 1,
+                    mt: 0.3,
                     backgroundColor: "#0078d4",
                     color: "#ffffff",
                     textTransform: "none",

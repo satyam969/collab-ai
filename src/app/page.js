@@ -99,7 +99,7 @@ const Home = () => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState(null);
   const [newProjectName, setNewProjectName] = useState("");
-  const [visibleCount, setVisibleCount] = useState(9);
+  const [visibleCount, setVisibleCount] = useState(11);
   const [error, setError] = useState("");
   const [notification, setNotification] = useState({
     open: false,
@@ -238,7 +238,7 @@ const Home = () => {
   };
 
   const handleLoadMore = () => {
-    setVisibleCount((prevCount) => prevCount + 3);
+    setVisibleCount((prevCount) => prevCount + 4);
   };
 
   const handleCloseNotification = () => {
