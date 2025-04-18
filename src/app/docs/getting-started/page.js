@@ -22,7 +22,7 @@ export default function GettingStarted() {
     {
       title: "Next.js Project",
       description: "Set up a Next.js project with full features",
-      image: "/createabasicnextproject.png",
+      image: "/createabasicnextproject2.png",
       color: "#ffffff",
       instructions: [
         "Click the '+' button to create a new project",
