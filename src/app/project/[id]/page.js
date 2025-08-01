@@ -1,120 +1,550 @@
+// "use client";
+// import React, { useEffect, useState, useRef } from "react";
+// import { Container, Box, Snackbar, Alert } from "@mui/material";
+// import axios from "axios";
+// import { useParams, useRouter } from "next/navigation";
+// import { useSession } from "next-auth/react";
+// import { getWebContainer } from "@/lib/webconatiner";
+// import { pusherClient } from "@/lib/pusherClient";
+
+// // Components
+// import ChatPanel from "@/components/ChatPanel";
+// import FileTreePanel from "@/components/FileTreePanel";
+// import ProjectViewPanel from "@/components/ProjectViewPanel";
+
+// const Projects = () => {
+//   const { id } = useParams();
+//   const router = useRouter();
+//   const { data: session, status } = useSession();
+//   const messageContainerRef = useRef(null);
+
+//   // State management
+//   const [runProcess, setRunProcess] = useState(null);
+//   const [projectType, setProjectType] = useState("react");
+//   const [isClient, setIsClient] = useState(false);
+//   const [chats, setChats] = useState([]);
+//   const [fileTree, setFileTree] = useState({});
+//   const [selectedFiles, setSelectedFiles] = useState(new Set());
+//   const [include, setInclude] = useState(false);
+//   const [newMessage, setNewMessage] = useState("");
+//   const [selectedFileContent, setSelectedFileContent] = useState("");
+//   const [selectedFileName, setSelectedFileName] = useState("");
+//   const [lastfiletreeid, setLastFileTreeId] = useState(null);
+//   const [webContainer, setWebContainer] = useState(null);
+//   const [url, setUrl] = useState("");
+//   const [searchTerm, setSearchTerm] = useState("");
+//   const [addedUsers, setAddedUsers] = useState([]);
+//   const [searchuser, setSearchUser] = useState([]);
+//   const [clickCount, setClickCount] = useState(0);
+//   const [expandedDirs, setExpandedDirs] = useState({});
+//   const [notification, setNotification] = useState({
+//     open: false,
+//     message: "",
+//     severity: "success",
+//   });
+
+//   const projectid = id;
+
+//   if (!projectid) {
+//     return <div>Loading...</div>;
+//   }
+
+//   // API Functions
+//   const addusers = async (usersearch) => {
+//     try {
+//       const response = await axios.get(`/api/user`, { params: usersearch });
+//       const addedUserIdsSet = new Set(addedUsers?.map((user) => user._id));
+//       const filteredUsers = response.data.data.filter((user) => {
+//         return !addedUserIdsSet.has(user._id);
+//       });
+//       setSearchUser(filteredUsers);
+//     } catch (error) {
+//       console.log(error);
+//     }
+//   };
+
+//   const allMessages = async () => {
+//     try {
+//       const response = await axios.get("/api/messages", {
+//         params: {
+//           chatId: projectid,
+//         },
+//       });
+//       const ALLMESSAGE = [];
+//       response.data.forEach((message) => {
+//         if (
+//           message.sender &&
+//           message.sender._id === process.env.NEXT_PUBLIC_AI
+//         ) {
+//           try {
+//             const parsedContent = JSON.parse(message.content);
+//             if (parsedContent?.fileTree) {
+//               setLastFileTreeId(message._id);
+//               setFileTree(parsedContent.fileTree);
+//             }
+//             const newmess = {
+//               ...message,
+//               content: parsedContent.text,
+//             };
+//             ALLMESSAGE.push(newmess);
+//           } catch (error) {
+//             console.error("Failed to parse AI message content:", error);
+//           }
+//         } else {
+//           ALLMESSAGE.push(message);
+//         }
+//       });
+//       setChats(ALLMESSAGE);
+//     } catch (error) {
+//       console.log(error);
+//     }
+//   };
+
+//   const Chat = async () => {
+//     try {
+//       const response = await axios.post(`/api/chats`, { projectid });
+//       setAddedUsers(response.data.result.users);
+//     } catch (error) {
+//       console.error(error);
+//     }
+//   };
+
+//   const handleSave = async () => {
+//     try {
+//       if (!lastfiletreeid) {
+//         console.log("No Prev Prompt Generated fileTree ");
+//         return;
+//       }
+
+//       console.log("project id ", projectid);
+
+//       const response = await axios.patch("/api/messages", {
+//         content: JSON.stringify({ fileTree }),
+//         messageId: lastfiletreeid,
+//       });
+//       console.log(response);
+//     } catch (error) {
+//       console.log(error);
+//     }
+//   };
+
+//   // Event Handlers
+//   const handleSendMessage = async (e) => {
+//     try {
+//       e.preventDefault();
+//       const inc = include && lastfiletreeid;
+//       const response = await axios.post("/api/messages", {
+//         content: newMessage,
+//         ...(inc && { filetree: JSON.stringify(fileTree) }),
+//         projectid,
+//         sender: session?.user._id,
+//       });
+//       setChats([...chats, response.data.result]);
+//       setNewMessage("");
+//     } catch (error) {
+//       console.error(error);
+//     }
+//   };
+
+//   const handleAddUser = async (user) => {
+//     try {
+//       const response = await axios.post("/api/invitations", {
+//         projectId: projectid,
+//         invitedUserId: user._id,
+//         invitedByUserId: session?.user._id,
+//       });
+
+//       setNotification({
+//         open: true,
+//         message: `Invitation sent to ${user.name}`,
+//         severity: "success",
+//       });
+
+//       setSearchUser(searchuser.filter((item) => item._id !== user._id));
+//     } catch (error) {
+//       console.error("Error sending invitation:", error);
+//       setNotification({
+//         open: true,
+//         message: error.response?.data?.error || "Failed to send invitation",
+//         severity: "error",
+//       });
+//     }
+//   };
+
+//   const handleRemoveUser = async (user) => {
+//     try {
+//       const response = await axios.delete("/api/chats", {
+//         params: {
+//           projectid,
+//           userId: user._id,
+//           removedBy: session?.user._id,
+//         },
+//       });
+
+//       setAddedUsers(addedUsers.filter((item) => item._id !== user._id));
+
+//       if (!searchuser.some((item) => item._id === user._id)) {
+//         setSearchUser([...searchuser, user]);
+//       }
+
+//       setNotification({
+//         open: true,
+//         message: `${user.name} has been removed from the project`,
+//         severity: "success",
+//       });
+//     } catch (error) {
+//       console.error("Error removing user:", error);
+//       setNotification({
+//         open: true,
+//         message: error.response?.data?.error || "Failed to remove user",
+//         severity: "error",
+//       });
+//     }
+//   };
+
+//   const handleSelectFile = (file, filePath) => {
+//     if (!file) {
+//       return;
+//     }
+//     if (selectedFileName === filePath) {
+//       setSelectedFiles(new Set());
+//       setSelectedFileContent("");
+//       setSelectedFileName("");
+//       return;
+//     }
+//     setSelectedFiles(new Set([filePath]));
+//     setSelectedFileContent(file.file.contents);
+//     setSelectedFileName(filePath);
+//   };
+
+//   const handleRemoveFile = (fileId) => {
+//     setSelectedFiles((prev) => {
+//       const newSet = new Set(prev);
+//       newSet.delete(fileId);
+//       return newSet;
+//     });
+//     setSelectedFileContent("");
+//     setSelectedFileName("");
+//   };
+
+//   const toggleDirectory = (path) => {
+//     setExpandedDirs((prev) => ({
+//       ...prev,
+//       [path]: !prev[path],
+//     }));
+//   };
+
+//   const handleFileContentChange = (newContent) => {
+//     setSelectedFileContent(newContent);
+//     setFileTree((prevFileTree) => {
+//       const newFileTree = JSON.parse(JSON.stringify(prevFileTree));
+//       let target = newFileTree;
+//       const pathParts = selectedFileName.split("/");
+//       for (let i = 0; i < pathParts.length - 1; i++) {
+//         target = target[pathParts[i]].directory;
+//       }
+//       target[pathParts[pathParts.length - 1]].file.contents = newContent;
+//       return newFileTree;
+//     });
+//   };
+
+//   const handleProjectTypeChange = (e) => {
+//     const newType = e.target.value;
+//     setProjectType(newType);
+//     if (isClient) {
+//       localStorage.setItem(`projectType_${id}`, newType);
+//     }
+//   };
+
+//   const handleRunProject = async () => {
+//     setClickCount(1);
+
+//     await webContainer.mount(fileTree);
+
+//     const installProcess = await webContainer.spawn("npm", ["install"]);
+//     installProcess.output.pipeTo(
+//       new WritableStream({
+//         write(chunk) {
+//           // console.log(chunk);
+//         },
+//       })
+//     );
+
+//     const exitCode = await installProcess.exit;
+//     if (exitCode !== 0) {
+//       console.error("❌ Install failed.");
+//       return;
+//     }
+
+//     setClickCount(2);
+
+//     if (runProcess) {
+//       runProcess.kill();
+//     }
+
+//     let tempRunProcess;
+//     switch (projectType) {
+//       case "react":
+//       case "next":
+//         tempRunProcess = await webContainer.spawn("npm", ["run", "dev"]);
+//         break;
+//       case "express":
+//         tempRunProcess = await webContainer.spawn("npm", ["start"]);
+//         break;
+//       default:
+//         tempRunProcess = await webContainer.spawn("npm", ["run", "dev"]);
+//     }
+
+//     tempRunProcess.output.pipeTo(
+//       new WritableStream({
+//         write(chunk) {
+//           console.log(chunk);
+//         },
+//       })
+//     );
+
+//     setRunProcess(tempRunProcess);
+
+//     webContainer.on("server-ready", (port, url) => {
+//       console.log(port, url);
+//       setUrl(url);
+//     });
+//   };
+
+//   // Effects
+//   useEffect(() => {
+//     pusherClient.subscribe(`${projectid}`);
+//     pusherClient.subscribe(`project-${projectid}`);
+
+//     addusers();
+
+//     const handleMessage = (message) => {
+//       if (message.sender && message.sender._id === process.env.NEXT_PUBLIC_AI) {
+//         try {
+//           allMessages();
+//         } catch (error) {
+//           console.log(error);
+//         }
+//       } else {
+//         setChats((prev) => [...prev, message]);
+//       }
+//     };
+
+//     const handleUpdatedFileTree = (message) => {
+//       setNotification({
+//         open: true,
+//         message: "FileTree Updated",
+//         severity: "success",
+//       });
+
+//       console.log("message ", message);
+//       console.log("FileTree Updated", message.fileTree);
+//       setSelectedFiles(new Set());
+//       setSelectedFileContent("");
+//       setSelectedFileName("");
+//       setFileTree(message.fileTree);
+//     };
+
+//     const handleProjectDeleted = (data) => {
+//       setNotification({
+//         open: true,
+//         message: data.message,
+//         severity: "info",
+//       });
+//       router.push("/");
+//     };
+
+//     const handleNewMember = (data) => {
+//       setNotification({
+//         open: true,
+//         message: data.message,
+//         severity: "info",
+//       });
+//       Chat();
+//     };
+
+//     const handleMemberRemoved = (data) => {
+//       setNotification({
+//         open: true,
+//         message: data.message,
+//         severity: "info",
+//       });
+
+//       if (data.removedUserId === session?.user._id) {
+//         router.push("/");
+//       } else {
+//         Chat();
+//       }
+//     };
+
+//     pusherClient.bind("incoming-message", handleMessage);
+//     pusherClient.bind("updatedfiletree", handleUpdatedFileTree);
+//     pusherClient.bind("project-deleted", handleProjectDeleted);
+//     pusherClient.bind("new-member", handleNewMember);
+//     pusherClient.bind("member-removed", handleMemberRemoved);
+
+//     return () => {
+//       pusherClient.unsubscribe(`chat:${projectid}`);
+//       pusherClient.unsubscribe(`project-${projectid}`);
+//       pusherClient.unbind("incoming-message", handleMessage);
+//       pusherClient.unbind("updatedfiletree", handleUpdatedFileTree);
+//       pusherClient.unbind("project-deleted", handleProjectDeleted);
+//       pusherClient.unbind("new-member", handleNewMember);
+//       pusherClient.unbind("member-removed", handleMemberRemoved);
+//     };
+//   }, [projectid, chats]);
+
+//   useEffect(() => {
+//     Chat();
+//     if (!webContainer) {
+//       getWebContainer().then((container) => {
+//         setWebContainer(container);
+//         console.log("container started");
+//       });
+//     }
+//     allMessages();
+//   }, []);
+
+//   useEffect(() => {
+//     if (messageContainerRef.current) {
+//       messageContainerRef.current.scrollTo({
+//         top: messageContainerRef.current.scrollHeight,
+//         behavior: "smooth",
+//       });
+//     }
+//   }, [chats]);
+
+//   useEffect(() => {
+//     setIsClient(true);
+//   }, []);
+
+//   useEffect(() => {
+//     if (isClient) {
+//       const storedType = localStorage.getItem(`projectType_${id}`);
+//       if (storedType) {
+//         setProjectType(storedType);
+//       }
+
+//       const handleStorageChange = () => {
+//         localStorage.setItem(`projectType_${id}`, projectType);
+//       };
+
+//       window.addEventListener('storage', handleStorageChange);
+
+//       return () => {
+//         window.removeEventListener('storage', handleStorageChange);
+//       };
+//     }
+//   }, [projectType, id, isClient]);
+
+//   return (
+//     <Container
+//       maxWidth={false}
+//       className="my-container flex flex-row h-screen w-screen bg-[#1e1e1e] p-0"
+//       sx={{
+//         width: "100vw",
+//         height: "100vh",
+//         margin: 0,
+//         padding: "8px",
+//         gap: "8px",
+//       }}
+//     >
+//       <Box className="w-[20vw] rounded-lg">
+//         <ChatPanel
+//           chats={chats}
+//           newMessage={newMessage}
+//           setNewMessage={setNewMessage}
+//           include={include}
+//           setInclude={setInclude}
+//           handleSendMessage={handleSendMessage}
+//           addedUsers={addedUsers}
+//           searchuser={searchuser}
+//           searchTerm={searchTerm}
+//           setSearchTerm={setSearchTerm}
+//           handleAddUser={handleAddUser}
+//           handleRemoveUser={handleRemoveUser}
+//           session={session}
+//           messageContainerRef={messageContainerRef}
+//         />
+//       </Box>
+
+//       <Box className="w-[40vw] rounded-lg flex flex-col">
+//         <FileTreePanel
+//           fileTree={fileTree}
+//           setFileTree={setFileTree}
+//           selectedFileName={selectedFileName}
+//           selectedFileContent={selectedFileContent}
+//           expandedDirs={expandedDirs}
+//           projectType={projectType}
+//           clickCount={clickCount}
+//           lastfiletreeid={lastfiletreeid}
+//           handleSelectFile={handleSelectFile}
+//           toggleDirectory={toggleDirectory}
+//           handleFileContentChange={handleFileContentChange}
+//           handleSave={handleSave}
+//           handleProjectTypeChange={handleProjectTypeChange}
+//           handleRunProject={handleRunProject}
+//           setNotification={setNotification}
+//         />
+//       </Box>
+
+//       <Box className="w-[40vw] rounded-lg flex flex-col">
+//         <ProjectViewPanel
+//           url={url}
+//           setUrl={setUrl}
+//           webContainer={webContainer}
+//         />
+//       </Box>
+
+//       <Snackbar
+//         open={notification.open}
+//         autoHideDuration={6000}
+//         onClose={() => setNotification({ ...notification, open: false })}
+//         anchorOrigin={{ vertical: "top", horizontal: "center" }}
+//       >
+//         <Alert
+//           onClose={() => setNotification({ ...notification, open: false })}
+//           severity={notification.severity}
+//           sx={{ width: "100%" }}
+//         >
+//           {notification.message}
+//         </Alert>
+//       </Snackbar>
+//     </Container>
+//   );
+// };
+
+// export default Projects;
+
 "use client";
 import React, { useEffect, useState, useRef } from "react";
-import {
-  Container,
-  Typography,
-  Card,
-  Divider,
-  Box,
-  TextField,
-  Button,
-  Modal,
-  List,
-  ListItem,
-  ListItemText,
-  IconButton,
-  Paper,
-  FormControlLabel,
-  Checkbox,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  Snackbar,
-  Alert,
-} from "@mui/material";
-import { styled } from "@mui/system";
+import { Container, Box, Snackbar, Alert } from "@mui/material";
 import axios from "axios";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { getWebContainer } from "@/lib/webconatiner";
 import { pusherClient } from "@/lib/pusherClient";
-import CloseIcon from "@mui/icons-material/Close";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import ChevronRightIcon from "@mui/icons-material/ChevronRight";
-import DeleteIcon from "@mui/icons-material/Delete";
-import NoteAddIcon from "@mui/icons-material/NoteAdd";
-import CreateNewFolderIcon from "@mui/icons-material/CreateNewFolder";
-import FolderIcon from "@mui/icons-material/Folder";
-import InsertDriveFileIcon from "@mui/icons-material/InsertDriveFile";
-import AceEditor from "react-ace";
 
-import "ace-builds/src-noconflict/mode-javascript";
-import "ace-builds/src-noconflict/mode-typescript";
-import "ace-builds/src-noconflict/mode-json";
-import "ace-builds/src-noconflict/mode-html";
-import "ace-builds/src-noconflict/mode-css";
-import "ace-builds/src-noconflict/mode-python";
-import "ace-builds/src-noconflict/theme-monokai";
+// Components
+import ChatPanel from "@/components/ChatPanel";
+import dynamic from 'next/dynamic';
 
-const StyledCard = styled(Card)(({ theme }) => ({
-  backgroundColor: "#1e1e1e",
-  borderRadius: "8px",
-  border: "1px solid #333",
-  position: "relative",
-  width: "100%",
-  height: "100%",
-  overflow: "hidden",
-  boxShadow: "0 4px 10px rgba(0, 0, 0, 0.3)",
-  transition: "box-shadow 0.3s ease",
-  "&:hover": {
-    boxShadow: "0 6px 15px rgba(0, 0, 0, 0.5)",
-  },
-}));
-
-const MessageContainer = styled(Box)({
-  display: "flex",
-  flexDirection: "column",
-  overflowY: "auto",
-  flex: 1,
-  padding: "12px",
-  backgroundColor: "#252526",
-});
-
-const MessageBubble = styled(Card)(({ isuser }) => ({
-  maxWidth: "70%",
-  margin: isuser === "true" ? "8px 0 8px auto" : "8px auto 8px 0",
-  background: isuser === "true" ? "#0078d4" : "#3c3c3c",
-  color: "white",
-  borderRadius: "12px",
-  padding: "10px 14px",
-  overflowWrap: "break-word",
-  wordBreak: "break-word",
-  whiteSpace: "pre-wrap",
-  flexShrink: 0,
-  display: "flex",
-  alignItems: "flex-start",
-  minHeight: "40px",
-  boxShadow: "0 2px 5px rgba(0, 0, 0, 0.2)",
-  transition: "transform 0.2s ease",
-  "&:hover": {
-    transform: "translateY(-2px)",
-  },
-}));
+const FileTreePanel = dynamic(
+  () => import('@/components/FileTreePanel'),
+  { ssr: false } 
+);
+import ProjectViewPanel from "@/components/ProjectViewPanel";
 
 const Projects = () => {
   const { id } = useParams();
+  const router = useRouter();
+  const { data: session, status } = useSession();
+  const messageContainerRef = useRef(null);
+
+  // State management
   const [runProcess, setRunProcess] = useState(null);
-  const [open, setOpen] = useState(false);
-  const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [createPath, setCreatePath] = useState("Root");
-  const [newItemName, setNewItemName] = useState("");
-  const [newItemType, setNewItemType] = useState("file");
   const [projectType, setProjectType] = useState("react");
   const [isClient, setIsClient] = useState(false);
-  const handleOpen = () => setOpen(true);
-  const handleClose = () => setOpen(false);
-  const handleCreateModalOpen = (path, type = "file") => {
-    setCreatePath(path);
-    setNewItemType(type);
-    setCreateModalOpen(true);
-  };
-  const handleCreateModalClose = () => {
-    setCreateModalOpen(false);
-    setNewItemName("");
-    setNewItemType("file");
-    setCreatePath("Root");
-  };
   const [chats, setChats] = useState([]);
   const [fileTree, setFileTree] = useState({});
   const [selectedFiles, setSelectedFiles] = useState(new Set());
@@ -122,16 +552,13 @@ const Projects = () => {
   const [newMessage, setNewMessage] = useState("");
   const [selectedFileContent, setSelectedFileContent] = useState("");
   const [selectedFileName, setSelectedFileName] = useState("");
-  const router = useRouter();
   const [lastfiletreeid, setLastFileTreeId] = useState(null);
   const [webContainer, setWebContainer] = useState(null);
   const [url, setUrl] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [addedUsers, setAddedUsers] = useState([]);
   const [searchuser, setSearchUser] = useState([]);
-  const { data: session, status } = useSession();
   const [clickCount, setClickCount] = useState(0);
-  const messageContainerRef = useRef(null);
   const [expandedDirs, setExpandedDirs] = useState({});
   const [notification, setNotification] = useState({
     open: false,
@@ -139,20 +566,13 @@ const Projects = () => {
     severity: "success",
   });
 
-  const handleClickbuton = () => {
-    if (clickCount == 1) {
-      setTimeout(() => {
-        setClickCount((prevCount) => (prevCount + 1) % 3);
-      }, 6000);
-    }
-  };
-
   const projectid = id;
 
   if (!projectid) {
     return <div>Loading...</div>;
   }
 
+  // API Functions
   const addusers = async (usersearch) => {
     try {
       const response = await axios.get(`/api/user`, { params: usersearch });
@@ -165,111 +585,6 @@ const Projects = () => {
       console.log(error);
     }
   };
-
-  useEffect(() => {
-    pusherClient.subscribe(`${projectid}`);
-    pusherClient.subscribe(`project-${projectid}`);
-    
-    addusers();
-
-    const handleMessage = (message) => {
-      if (message.sender && message.sender._id === process.env.NEXT_PUBLIC_AI) {
-        try {
-          // const parsedContent = JSON.parse(message.content);
-          // if (parsedContent?.fileTree) {
-          //   setLastFileTreeId(message._id);
-          //   setFileTree(parsedContent.fileTree);
-          // }
-          // if (parsedContent?.text) {
-          //   const newmess = {
-          //     ...message,
-          //     content: parsedContent.text,
-          //   };
-          //   setChats((prev) => [...prev, newmess]);
-          allMessages();
-          // }
-        } catch (error) {
-          console.log(error);
-        }
-      } else {
-        setChats((prev) => [...prev, message]);
-      }
-    };
-
-    const handleUpdatedFileTree = (message) => {
-      setNotification({
-        open: true,
-        message: "FileTree Updated",
-        severity: "success",
-      });
-
-      console.log("message ", message);
-
-      console.log("FileTree Updated", message.fileTree);
-      setSelectedFiles(new Set());
-      setSelectedFileContent("");
-      setSelectedFileName("");
-      setFileTree(message.fileTree);
-    };
-
-    const handleProjectDeleted = (data) => {
-      setNotification({
-        open: true,
-        message: data.message,
-        severity: "info",
-      });
-      router.push("/");
-    };
-
-    // Handle new member notification
-    const handleNewMember = (data) => {
-      setNotification({
-        open: true,
-        message: data.message,
-        severity: "info",
-      });
-
-      // Refresh the users list
-      Chat();
-    };
-
-    // Handle member removed notification
-    const handleMemberRemoved = (data) => {
-      setNotification({
-        open: true,
-        message: data.message,
-        severity: "info",
-      });
-
-      // If the current user is the one removed, redirect to home
-      if (data.removedUserId === session?.user._id) {
-        router.push("/");
-      } else {
-        // Otherwise just refresh the users list
-        Chat();
-      }
-    };
-
-
-
-    pusherClient.bind("incoming-message", handleMessage);
-    pusherClient.bind("updatedfiletree", handleUpdatedFileTree);
-    pusherClient.bind("project-deleted", handleProjectDeleted);
-    pusherClient.bind("new-member", handleNewMember);
-    pusherClient.bind("member-removed", handleMemberRemoved);
-   
-
-    return () => {
-      pusherClient.unsubscribe(`chat:${projectid}`);
-      pusherClient.unsubscribe(`project-${projectid}`);
-      pusherClient.unbind("incoming-message", handleMessage);
-      pusherClient.unbind("updatedfiletree", handleUpdatedFileTree);
-      pusherClient.unbind("project-deleted", handleProjectDeleted);
-      pusherClient.unbind("new-member", handleNewMember);
-    
-      pusherClient.unbind("member-removed", handleMemberRemoved);
-    };
-  }, [projectid, chats]);
 
   const allMessages = async () => {
     try {
@@ -317,53 +632,26 @@ const Projects = () => {
     }
   };
 
-  useEffect(() => {
-    Chat();
-    if (!webContainer) {
-      getWebContainer().then((container) => {
-        setWebContainer(container);
-        console.log("container started");
-      });
-    }
-    allMessages();
-  }, []);
+  const handleSave = async () => {
+    try {
+      if (!lastfiletreeid) {
+        console.log("No Prev Prompt Generated fileTree ");
+        return;
+      }
 
-  useEffect(() => {
-    if (messageContainerRef.current) {
-      messageContainerRef.current.scrollTo({
-        top: messageContainerRef.current.scrollHeight,
-        behavior: "smooth",
-      });
-    }
-  }, [chats]);
+      console.log("project id ", projectid);
 
-  const handleSelectFile = (file, filePath) => {
-    if (!file) {
-      return;
+      const response = await axios.patch("/api/messages", {
+        content: JSON.stringify({ fileTree }),
+        messageId: lastfiletreeid,
+      });
+      console.log(response);
+    } catch (error) {
+      console.log(error);
     }
-    // If the file is already selected, deselect it
-    if (selectedFileName === filePath) {
-      setSelectedFiles(new Set());
-      setSelectedFileContent("");
-      setSelectedFileName("");
-      return;
-    }
-    // Select the new file
-    setSelectedFiles(new Set([filePath]));
-    setSelectedFileContent(file.file.contents);
-    setSelectedFileName(filePath);
   };
 
-  const handleRemoveFile = (fileId) => {
-    setSelectedFiles((prev) => {
-      const newSet = new Set(prev);
-      newSet.delete(fileId);
-      return newSet;
-    });
-    setSelectedFileContent("");
-    setSelectedFileName("");
-  };
-
+  // Event Handlers
   const handleSendMessage = async (e) => {
     try {
       e.preventDefault();
@@ -383,22 +671,18 @@ const Projects = () => {
 
   const handleAddUser = async (user) => {
     try {
-      // Send an invitation to the user
       const response = await axios.post("/api/invitations", {
         projectId: projectid,
         invitedUserId: user._id,
         invitedByUserId: session?.user._id,
       });
 
-      // Show success notification
       setNotification({
         open: true,
         message: `Invitation sent to ${user.name}`,
         severity: "success",
       });
 
-      // Remove the invited user from the search results
-      // This prevents sending multiple invitations to the same user
       setSearchUser(searchuser.filter((item) => item._id !== user._id));
     } catch (error) {
       console.error("Error sending invitation:", error);
@@ -420,15 +704,12 @@ const Projects = () => {
         },
       });
 
-      // Update the local users list
       setAddedUsers(addedUsers.filter((item) => item._id !== user._id));
 
-      // Add the user back to the searchable users list if not already there
       if (!searchuser.some((item) => item._id === user._id)) {
         setSearchUser([...searchuser, user]);
       }
 
-      // Show success notification
       setNotification({
         open: true,
         message: `${user.name} has been removed from the project`,
@@ -444,27 +725,29 @@ const Projects = () => {
     }
   };
 
-  const filteredSearchUsers = searchuser.filter((user) =>
-    user.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const handleSave = async () => {
-    try {
-      if (!lastfiletreeid) {
-        console.log("No Prev Prompt Generated fileTree ");
-        return;
-      }
-
-console.log("project id ", projectid);
-
-      const response = await axios.patch("/api/messages", {
-        content: JSON.stringify({ fileTree }),
-        messageId: lastfiletreeid,
-      });
-      console.log(response);
-    } catch (error) {
-      console.log(error);
+  const handleSelectFile = (file, filePath) => {
+    if (!file) {
+      return;
     }
+    if (selectedFileName === filePath) {
+      setSelectedFiles(new Set());
+      setSelectedFileContent("");
+      setSelectedFileName("");
+      return;
+    }
+    setSelectedFiles(new Set([filePath]));
+    setSelectedFileContent(file.file.contents);
+    setSelectedFileName(filePath);
+  };
+
+  const handleRemoveFile = (fileId) => {
+    setSelectedFiles((prev) => {
+      const newSet = new Set(prev);
+      newSet.delete(fileId);
+      return newSet;
+    });
+    setSelectedFileContent("");
+    setSelectedFileName("");
   };
 
   const toggleDirectory = (path) => {
@@ -472,348 +755,6 @@ console.log("project id ", projectid);
       ...prev,
       [path]: !prev[path],
     }));
-  };
-
-  const handleCreateItem = () => {
-    if (!newItemName) {
-      alert("Please enter a name for the new item.");
-      return;
-    }
-
-    const invalidChars = /[<>:"\/\\|?*]/;
-    if (invalidChars.test(newItemName)) {
-      alert('Item name contains invalid characters (<>:"/\\|?*).');
-      return;
-    }
-
-    setFileTree((prevFileTree) => {
-      const newFileTree = JSON.parse(JSON.stringify(prevFileTree));
-      let target = newFileTree;
-
-      if (createPath === "Root") {
-        if (target[newItemName]) {
-          alert("An item with this name already exists at the root level.");
-          return prevFileTree;
-        }
-        if (newItemType === "folder") {
-          target[newItemName] = { directory: {} };
-        } else {
-          target[newItemName] = { file: { contents: "" } };
-        }
-        return newFileTree;
-      }
-
-      const pathParts = createPath.split("/");
-      for (let part of pathParts) {
-        if (!target[part]) {
-          target[part] = { directory: {} };
-        }
-        if (!target[part].directory) {
-          alert(`Path ${part} is not a directory.`);
-          return prevFileTree;
-        }
-        target = target[part].directory;
-      }
-
-      if (target[newItemName]) {
-        alert("An item with this name already exists at this path.");
-        return prevFileTree;
-      }
-
-      if (newItemType === "folder") {
-        target[newItemName] = { directory: {} };
-      } else {
-        target[newItemName] = { file: { contents: "" } };
-      }
-
-      return newFileTree;
-    });
-
-    handleCreateModalClose();
-  };
-
-  const handleDeleteItem = async (path, isDirectory) => {
-    try {
-      const newFileTree = await new Promise((resolve) => {
-        setFileTree((prevFileTree) => {
-          const newFileTree = JSON.parse(JSON.stringify(prevFileTree));
-          let target = newFileTree;
-          const pathParts = path.split("/");
-          const itemName = pathParts.pop();
-
-          for (let part of pathParts) {
-            if (!target[part] || !target[part].directory) {
-              console.error(`Path ${part} does not exist or is not a directory.`);
-              return prevFileTree;
-            }
-            target = target[part].directory;
-          }
-
-          if (target[itemName]) {
-            if (isDirectory && !target[itemName].directory) {
-              console.error(`Item at ${path} is not a directory.`);
-              return prevFileTree;
-            }
-            if (!isDirectory && !target[itemName].file) {
-              console.error(`Item at ${path} is not a file.`);
-              return prevFileTree;
-            }
-            delete target[itemName];
-            if (!isDirectory && selectedFileName === path) {
-              setSelectedFileContent("");
-              setSelectedFileName("");
-              setSelectedFiles((prev) => {
-                const newSet = new Set(prev);
-                newSet.delete(path);
-                return newSet;
-              });
-            }
-            if (isDirectory && selectedFileName.startsWith(path)) {
-              setSelectedFileContent("");
-              setSelectedFileName("");
-              setSelectedFiles((prev) => {
-                const newSet = new Set(prev);
-                newSet.forEach((filePath) => {
-                  if (filePath.startsWith(path)) {
-                    newSet.delete(filePath);
-                  }
-                });
-                return newSet;
-              });
-            }
-          } else {
-            console.error(`Item at ${path} does not exist.`);
-            return prevFileTree;
-          }
-
-          resolve(newFileTree);
-          return newFileTree;
-        });
-      });
-
-      // Save changes with the updated fileTree
-      if (!lastfiletreeid) {
-        console.error("No previous fileTree message ID found");
-        return;
-      }
-
-      await axios.patch("/api/messages", {
-        content: JSON.stringify({ fileTree: newFileTree }),
-        messageId: lastfiletreeid,
-      });
-
-      setNotification({
-        open: true,
-        message: `Successfully deleted ${isDirectory ? "folder" : "file"}`,
-        severity: "success",
-      });
-    } catch (error) {
-      console.error("Error deleting item:", error);
-      setNotification({
-        open: true,
-        message: `Failed to delete ${isDirectory ? "folder" : "file"}`,
-        severity: "error",
-      });
-    }
-  };
-
-  const RenderFileTree = ({ tree, parentPath = "" }) => {
-    return (
-      <>
-        {/* Root-level actions */}
-        {parentPath === "" && (
-          <Box
-            sx={{ display: "flex", alignItems: "center", padding: "4px 8px" }}
-          >
-            <Typography
-              sx={{
-                flexGrow: 1,
-                color: "#d4d4d4",
-                fontSize: "14px",
-                fontWeight: 500,
-              }}
-            >
-              Project Root
-            </Typography>
-            <IconButton
-              onClick={() => handleCreateModalOpen("Root", "file")}
-              sx={{ color: "#4fc1ff", padding: "2px" }}
-              title="New File"
-            >
-              <NoteAddIcon fontSize="small" />
-            </IconButton>
-            <IconButton
-              onClick={() => handleCreateModalOpen("Root", "folder")}
-              sx={{ color: "#4fc1ff", padding: "2px" }}
-              title="New Folder"
-            >
-              <CreateNewFolderIcon fontSize="small" />
-            </IconButton>
-          </Box>
-        )}
-        {Object.keys(tree).map((key) => {
-          const item = tree[key];
-          const currentPath = parentPath ? `${parentPath}/${key}` : key;
-
-          if (item.directory) {
-            const isExpanded = expandedDirs[currentPath] || false;
-            return (
-              <Box
-                key={currentPath}
-                sx={{ marginLeft: parentPath ? "16px" : "0" }}
-              >
-                <Box
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    padding: "4px 8px",
-                    backgroundColor: isExpanded ? "#2a2d2e" : "transparent",
-                    borderRadius: "4px",
-                    transition: "background-color 0.2s ease",
-                    "&:hover": {
-                      backgroundColor: "#2a2d2e",
-                    },
-                  }}
-                >
-                  <IconButton
-                    onClick={() => toggleDirectory(currentPath)}
-                    size="small"
-                    sx={{ color: "#d4d4d4", padding: "2px" }}
-                  >
-                    {isExpanded ? (
-                      <ExpandMoreIcon fontSize="small" />
-                    ) : (
-                      <ChevronRightIcon fontSize="small" />
-                    )}
-                  </IconButton>
-                  <FolderIcon
-                    sx={{
-                      color: "#90a4ae",
-                      marginRight: "8px",
-                      fontSize: "18px",
-                    }}
-                  />
-                  <Typography
-                    onClick={() => toggleDirectory(currentPath)}
-                    sx={{
-                      flexGrow: 1,
-                      color: "#d4d4d4",
-                      fontSize: "14px",
-                      cursor: "pointer",
-                      "&:hover": {
-                        color: "#ffffff",
-                      },
-                    }}
-                  >
-                    {key}
-                  </Typography>
-                  <IconButton
-                    onClick={() => handleCreateModalOpen(currentPath, "file")}
-                    sx={{ color: "#4fc1ff", padding: "2px" }}
-                    title="New File"
-                  >
-                    <NoteAddIcon fontSize="small" />
-                  </IconButton>
-                  <IconButton
-                    onClick={() => handleCreateModalOpen(currentPath, "folder")}
-                    sx={{ color: "#4fc1ff", padding: "2px" }}
-                    title="New Folder"
-                  >
-                    <CreateNewFolderIcon fontSize="small" />
-                  </IconButton>
-                  <IconButton
-                    onClick={() => handleDeleteItem(currentPath, true)}
-                    sx={{ color: "#f44336", padding: "2px" }}
-                    title="Delete Folder"
-                  >
-                    <DeleteIcon fontSize="small" />
-                  </IconButton>
-                </Box>
-                {isExpanded && (
-                  <RenderFileTree
-                    tree={item.directory}
-                    parentPath={currentPath}
-                  />
-                )}
-              </Box>
-            );
-          }
-
-          return (
-            <Box
-              key={currentPath}
-              sx={{ marginLeft: parentPath ? "16px" : "0" }}
-            >
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  padding: "4px 8px",
-                  borderRadius: "4px",
-                  transition: "all 0.2s ease",
-                  backgroundColor: selectedFileName === currentPath ? "#37373d" : "transparent",
-                  "&:hover": {
-                    backgroundColor: selectedFileName === currentPath ? "#37373d" : "#2a2d2e",
-                  },
-                }}
-              >
-                <InsertDriveFileIcon
-                  sx={{
-                    color: selectedFileName === currentPath ? "#ffffff" : "#4fc1ff",
-                    marginRight: "8px",
-                    fontSize: "18px",
-                  }}
-                />
-                <Typography
-                  onClick={() => handleSelectFile(item, currentPath)}
-                  sx={{
-                    flexGrow: 1,
-                    color: selectedFileName === currentPath ? "#ffffff" : "#d4d4d4",
-                    fontSize: "14px",
-                    cursor: "pointer",
-                    fontWeight: selectedFileName === currentPath ? 600 : 400,
-                    "&:hover": {
-                      color: "#ffffff",
-                    },
-                  }}
-                >
-                  {key}
-                </Typography>
-                <IconButton
-                  onClick={() => handleDeleteItem(currentPath, false)}
-                  sx={{ color: "#f44336", padding: "2px" }}
-                  title="Delete File"
-                >
-                  <DeleteIcon fontSize="small" />
-                </IconButton>
-              </Box>
-            </Box>
-          );
-        })}
-      </>
-    );
-  };
-
-  const getLanguage = (fileName) => {
-    const extension = fileName.split(".").pop().toLowerCase();
-    switch (extension) {
-      case "js":
-      case "jsx":
-        return "javascript";
-      case "ts":
-      case "tsx":
-        return "typescript";
-      case "json":
-        return "json";
-      case "html":
-        return "html";
-      case "css":
-        return "css";
-      case "py":
-        return "python";
-      default:
-        return "text";
-    }
   };
 
   const handleFileContentChange = (newContent) => {
@@ -830,36 +771,6 @@ console.log("project id ", projectid);
     });
   };
 
-  // Set isClient to true after component mounts
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  // Load and save project type
-  useEffect(() => {
-    if (isClient) {
-      // Load from localStorage
-      const storedType = localStorage.getItem(`projectType_${id}`);
-      if (storedType) {
-        setProjectType(storedType);
-      }
-
-      // Save to localStorage when it changes
-      const handleStorageChange = () => {
-        localStorage.setItem(`projectType_${id}`, projectType);
-      };
-
-      // Add event listener for storage changes
-      window.addEventListener('storage', handleStorageChange);
-
-      // Cleanup
-      return () => {
-        window.removeEventListener('storage', handleStorageChange);
-      };
-    }
-  }, [projectType, id, isClient]);
-
-  // Handle project type change
   const handleProjectTypeChange = (e) => {
     const newType = e.target.value;
     setProjectType(newType);
@@ -867,6 +778,197 @@ console.log("project id ", projectid);
       localStorage.setItem(`projectType_${id}`, newType);
     }
   };
+
+  const handleRunProject = async () => {
+    if (!webContainer) {
+        console.error("WebContainer is not ready.");
+        return;
+    }
+
+    setClickCount(1);
+
+    await webContainer.mount(fileTree);
+
+    const installProcess = await webContainer.spawn("npm", ["install"]);
+    installProcess.output.pipeTo(
+      new WritableStream({
+        write(chunk) {
+          console.log(chunk);
+        },
+      })
+    );
+
+    const exitCode = await installProcess.exit;
+    if (exitCode !== 0) {
+      console.error("❌ Install failed.");
+      setClickCount(0); // Reset button state on failure
+      return;
+    }
+
+    setClickCount(2);
+
+    if (runProcess) {
+      runProcess.kill();
+    }
+
+    let tempRunProcess;
+    switch (projectType) {
+      case "react":
+      case "next":
+        tempRunProcess = await webContainer.spawn("npm", ["run", "dev"]);
+        break;
+      case "express":
+        tempRunProcess = await webContainer.spawn("npm", ["start"]);
+        break;
+      default:
+        tempRunProcess = await webContainer.spawn("npm", ["run", "dev"]);
+    }
+
+    tempRunProcess.output.pipeTo(
+      new WritableStream({
+        write(chunk) {
+          console.log(chunk);
+        },
+      })
+    );
+
+    setRunProcess(tempRunProcess);
+
+    webContainer.on("server-ready", (port, url) => {
+      console.log(port, url);
+      setUrl(url);
+    });
+  };
+
+  // Effects
+  useEffect(() => {
+    pusherClient.subscribe(`${projectid}`);
+    pusherClient.subscribe(`project-${projectid}`);
+
+    addusers();
+
+    const handleMessage = (message) => {
+      if (message.sender && message.sender._id === process.env.NEXT_PUBLIC_AI) {
+        try {
+          allMessages();
+        } catch (error) {
+          console.log(error);
+        }
+      } else {
+        setChats((prev) => [...prev, message]);
+      }
+    };
+
+    const handleUpdatedFileTree = (message) => {
+      setNotification({
+        open: true,
+        message: "FileTree Updated",
+        severity: "success",
+      });
+
+      console.log("message ", message);
+      console.log("FileTree Updated", message.fileTree);
+      setSelectedFiles(new Set());
+      setSelectedFileContent("");
+      setSelectedFileName("");
+      setFileTree(message.fileTree);
+    };
+
+    const handleProjectDeleted = (data) => {
+      setNotification({
+        open: true,
+        message: data.message,
+        severity: "info",
+      });
+      router.push("/");
+    };
+
+    const handleNewMember = (data) => {
+      setNotification({
+        open: true,
+        message: data.message,
+        severity: "info",
+      });
+      Chat();
+    };
+
+    const handleMemberRemoved = (data) => {
+      setNotification({
+        open: true,
+        message: data.message,
+        severity: "info",
+      });
+
+      if (data.removedUserId === session?.user._id) {
+        router.push("/");
+      } else {
+        Chat();
+      }
+    };
+
+    pusherClient.bind("incoming-message", handleMessage);
+    pusherClient.bind("updatedfiletree", handleUpdatedFileTree);
+    pusherClient.bind("project-deleted", handleProjectDeleted);
+    pusherClient.bind("new-member", handleNewMember);
+    pusherClient.bind("member-removed", handleMemberRemoved);
+
+    return () => {
+      pusherClient.unsubscribe(`chat:${projectid}`);
+      pusherClient.unsubscribe(`project-${projectid}`);
+      pusherClient.unbind("incoming-message", handleMessage);
+      pusherClient.unbind("updatedfiletree", handleUpdatedFileTree);
+      pusherClient.unbind("project-deleted", handleProjectDeleted);
+      pusherClient.unbind("new-member", handleNewMember);
+      pusherClient.unbind("member-removed", handleMemberRemoved);
+    };
+  }, [projectid, chats]);
+
+  useEffect(() => {
+    Chat();
+    if (!webContainer) {
+      getWebContainer()
+        .then((container) => {
+          setWebContainer(container);
+          console.log("✅ WebContainer is ready.");
+        })
+        .catch(error => {
+            console.error("❌ Failed to initialize WebContainer:", error);
+        });
+    }
+    allMessages();
+  }, []);
+
+  useEffect(() => {
+    if (messageContainerRef.current) {
+      messageContainerRef.current.scrollTo({
+        top: messageContainerRef.current.scrollHeight,
+        behavior: "smooth",
+      });
+    }
+  }, [chats]);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  useEffect(() => {
+    if (isClient) {
+      const storedType = localStorage.getItem(`projectType_${id}`);
+      if (storedType) {
+        setProjectType(storedType);
+      }
+
+      const handleStorageChange = () => {
+        localStorage.setItem(`projectType_${id}`, projectType);
+      };
+
+      window.addEventListener('storage', handleStorageChange);
+
+      return () => {
+        window.removeEventListener('storage', handleStorageChange);
+      };
+    }
+  }, [projectType, id, isClient]);
 
   return (
     <Container
@@ -880,680 +982,59 @@ console.log("project id ", projectid);
         gap: "8px",
       }}
     >
-      <Box
-        className="w-[20vw] rounded-lg"
-        sx={{
-          "&::-webkit-scrollbar": {
-            width: "6px",
-            height: "6px",
-          },
-          "&::-webkit-scrollbar-thumb": {
-            background: "rgba(255, 255, 255, 0.2)",
-            borderRadius: "10px",
-          },
-          "&::-webkit-scrollbar-track": {
-            background: "transparent",
-          },
-        }}
-      >
-        <StyledCard className="h-full flex flex-col">
-          <Typography
-            className="flex flex-row justify-between items-center px-4 py-2"
-            variant="h6"
-            sx={{ color: "#d4d4d4", fontSize: "16px", fontWeight: 500 }}
-          >
-            Chats
-            <Button
-              onClick={handleOpen}
-              sx={{
-                color: "#4fc1ff",
-                textTransform: "none",
-                fontSize: "14px",
-                "&:hover": {
-                  backgroundColor: "#2a2d2e",
-                },
-              }}
-            >
-              Add Users
-            </Button>
-            <Modal
-              open={open}
-              onClose={handleClose}
-              aria-labelledby="modal-modal-title"
-              aria-describedby="modal-modal-description"
-              sx={{
-                backdropFilter: "blur(10px)",
-                backgroundColor: "rgba(0, 0, 0, 0.7)",
-              }}
-            >
-              <Box
-                sx={{
-                  position: "absolute",
-                  top: "50%",
-                  left: "50%",
-                  transform: "translate(-50%, -50%)",
-                  width: 400,
-                  backgroundColor: "#252526",
-                  border: "1px solid #333",
-                  boxShadow: "0 4px 20px rgba(0, 0, 0, 0.5)",
-                  p: 3,
-                  borderRadius: 2,
-                  color: "#d4d4d4",
-                }}
-              >
-                <Typography
-                  id="modal-modal-title"
-                  variant="h6"
-                  component="h2"
-                  gutterBottom
-                  sx={{ fontSize: "18px" }}
-                >
-                  Available Users
-                </Typography>
-                <TextField
-                  label="Search Users"
-                  variant="outlined"
-                  fullWidth
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  sx={{
-                    mb: 2,
-                    backgroundColor: "#1e1e1e",
-                    borderRadius: "4px",
-                    input: { color: "#d4d4d4" },
-                    label: { color: "#888" },
-                    "& .MuiOutlinedInput-root": {
-                      "& fieldset": { borderColor: "#444" },
-                      "&:hover fieldset": { borderColor: "#666" },
-                      "&.Mui-focused fieldset": { borderColor: "#4fc1ff" },
-                    },
-                  }}
-                />
-                <Typography
-                  variant="h6"
-                  component="h2"
-                  gutterBottom
-                  sx={{ fontSize: "16px" }}
-                >
-                  Users in this Project
-                </Typography>
-                {addedUsers.length > 0 ? (
-                  <List>
-                    {addedUsers.map((user) => (
-                      <ListItem
-                        key={user._id}
-                        sx={{
-                          backgroundColor: "#2a2d2e",
-                          marginBottom: "8px",
-                          borderRadius: "4px",
-                          position: "relative",
-                          transition: "background-color 0.2s ease",
-                          "&:hover": {
-                            backgroundColor: "#323232",
-                          },
-                        }}
-                      >
-                        <ListItemText
-                          primary={user.name}
-                          sx={{ color: "#d4d4d4" }}
-                        />
-                        <IconButton
-                          onClick={() => handleRemoveUser(user)}
-                          sx={{
-                            position: "absolute",
-                            top: "50%",
-                            right: "10px",
-                            transform: "translateY(-50%)",
-                            color: "#f44336",
-                          }}
-                        >
-                          <CloseIcon fontSize="small" />
-                        </IconButton>
-                      </ListItem>
-                    ))}
-                  </List>
-                ) : (
-                  <Typography variant="body1" sx={{ color: "#888" }}>
-                    No users in this project.
-                  </Typography>
-                )}
-                <Typography
-                  variant="h6"
-                  component="h2"
-                  gutterBottom
-                  sx={{ mt: 3, fontSize: "16px" }}
-                >
-                  Add Users to Project
-                </Typography>
-                {filteredSearchUsers.length > 0 ? (
-                  <List>
-                    {filteredSearchUsers.map((user) => (
-                      <ListItem
-                        key={user._id}
-                        sx={{
-                          backgroundColor: "#2a2d2e",
-                          marginBottom: "8px",
-                          borderRadius: "4px",
-                          position: "relative",
-                          transition: "background-color 0.2s ease",
-                          "&:hover": {
-                            backgroundColor: "#323232",
-                          },
-                        }}
-                      >
-                        <ListItemText
-                          primary={user.name}
-                          sx={{ color: "#d4d4d4" }}
-                        />
-                        <IconButton
-                          onClick={() => handleAddUser(user)}
-                          sx={{
-                            position: "absolute",
-                            top: "50%",
-                            right: "10px",
-                            transform: "translateY(-50%)",
-                            color: "#4caf50",
-                          }}
-                        >
-                          <CloseIcon fontSize="small" />
-                        </IconButton>
-                      </ListItem>
-                    ))}
-                  </List>
-                ) : (
-                  <Typography variant="body1" sx={{ color: "#888" }}>
-                    No users available to add.
-                  </Typography>
-                )}
-                <Button
-                  onClick={handleClose}
-                  variant="contained"
-                  sx={{
-                    mt: 2,
-                    backgroundColor: "#3c3c3c",
-                    color: "#d4d4d4",
-                    textTransform: "none",
-                    "&:hover": {
-                      backgroundColor: "#444",
-                    },
-                  }}
-                >
-                  Close
-                </Button>
-              </Box>
-            </Modal>
-          </Typography>
-          <Divider
-            sx={{ margin: "0 16px", bgcolor: "rgba(255, 255, 255, 0.1)" }}
-          />
-          <MessageContainer ref={messageContainerRef}>
-            {chats?.map((chat) => (
-              <MessageBubble
-                key={chat?._id}
-                isuser={(chat?.sender?._id === session?.user._id).toString()}
-              >
-                <Typography sx={{ fontSize: "14px", color: "#d4d4d4" }}>
-                  {chat?.content}
-                </Typography>
-              </MessageBubble>
-            ))}
-          </MessageContainer>
-          <Box sx={{ padding: "12px", backgroundColor: "#252526" }}>
-            <TextField
-              fullWidth
-              variant="outlined"
-              placeholder="Type a message..."
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              onKeyPress={(e) => {
-                if (e.key === "Enter") handleSendMessage(e);
-              }}
-              sx={{
-                backgroundColor: "#1e1e1e",
-                borderRadius: "4px",
-                input: { color: "#d4d4d4" },
-                "& .MuiOutlinedInput-root": {
-                  "& fieldset": { borderColor: "#444" },
-                  "&:hover fieldset": { borderColor: "#666" },
-                  "&.Mui-focused fieldset": { borderColor: "#4fc1ff" },
-                },
-              }}
-            />
-            <Box sx={{ display: "flex", alignItems: "center", mt: 1, gap: 1 }}>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={include}
-                    onChange={(e) => setInclude(e.target.checked)}
-                    sx={{
-                      color: "#888",
-                      "&.Mui-checked": {
-                        color: "#4fc1ff",
-                      },
-                    }}
-                  />
-                }
-                label="Files"
-                sx={{ color: "#d4d4d4", margin: 0 }}
-              />
-              <Button
-                variant="contained"
-                onClick={handleSendMessage}
-                sx={{
-                  backgroundColor: "#0078d4",
-                  color: "#ffffff",
-                  textTransform: "none",
-                  "&:hover": {
-                    backgroundColor: "#005ea2",
-                  },
-                }}
-              >
-                Send
-              </Button>
-            </Box>
-          </Box>
-        </StyledCard>
+      <Box className={ `${url ? 'w-[20vw]' : 'w-[40vw]'}  rounded-lg`}>
+        <ChatPanel
+          chats={chats}
+          newMessage={newMessage}
+          setNewMessage={setNewMessage}
+          include={include}
+          setInclude={setInclude}
+          handleSendMessage={handleSendMessage}
+          addedUsers={addedUsers}
+          searchuser={searchuser}
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          handleAddUser={handleAddUser}
+          handleRemoveUser={handleRemoveUser}
+          session={session}
+          messageContainerRef={messageContainerRef}
+        />
       </Box>
 
-      <Box className="w-[40vw] rounded-lg flex flex-col">
-        <StyledCard className="h-full flex flex-col">
-          <Typography
-            className="flex flex-row justify-between items-center px-4 py-2"
-            variant="h6"
-            sx={{ color: "#d4d4d4", fontSize: "16px", fontWeight: 500 }}
-          >
-            File Tree
-            <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
-              <FormControl sx={{ minWidth: 120, mr: 1 }}>
-                <InputLabel sx={{ color: "#888" }}>Project Type</InputLabel>
-                <Select
-                  value={projectType}
-                  onChange={handleProjectTypeChange}
-                  sx={{
-                    color: "#d4d4d4",
-                    backgroundColor: "#1e1e1e",
-                    "& .MuiOutlinedInput-notchedOutline": {
-                      borderColor: "#444",
-                    },
-                    "&:hover .MuiOutlinedInput-notchedOutline": {
-                      borderColor: "#666",
-                    },
-                    "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                      borderColor: "#4fc1ff",
-                    },
-                  }}
-                >
-                  <MenuItem value="react">React.js</MenuItem>
-                  <MenuItem value="next">Next.js</MenuItem>
-                  <MenuItem value="express">Express.js</MenuItem>
-                </Select>
-              </FormControl>
-              <Button
-                onClick={async () => {
-                  // await webContainer.mount(fileTree);
-                  // const installProcess = await webContainer.spawn("npm", [
-                  //   "install",
-                  // ]);
-                  // installProcess.output.pipeTo(
-                  //   new WritableStream({
-                  //     write(chunk) {
-                  //       console.log(chunk);
-                  //     },
-                  //   })
-                  // );
-                  // if (runProcess) {
-                  //   runProcess.kill();
-                  // }
-                  
-                  // let tempRunProcess;
-                  // switch (projectType) {
-                  //   case "react":
-                  //     tempRunProcess = await webContainer.spawn("npm", ["run", "dev"]);
-                  //     break;
-                  //   case "next":
-                  //     tempRunProcess = await webContainer.spawn("npm", ["run", "dev"]);
-                  //     break;
-                  //   case "express":
-                  //     tempRunProcess = await webContainer.spawn("npm", ["start"]);
-                  //     break;
-                  //   default:
-                  //     tempRunProcess = await webContainer.spawn("npm", ["run", "dev"]);
-                  // }
-                  
-                  // tempRunProcess.output.pipeTo(
-                  //   new WritableStream({
-                  //     write(chunk) {
-                  //       console.log(chunk);
-                  //     },
-                  //   })
-                  // );
-                  // setRunProcess(tempRunProcess);
-                  // webContainer.on("server-ready", (port, url) => {
-                  //   console.log(port, url);
-                  //   setUrl(url);
-                  // });
-                  // handleClickbuton();
-
-                  setClickCount(1); // Installing...
-
-                  await webContainer.mount(fileTree);
-                
-                  const installProcess = await webContainer.spawn("npm", ["install"]);
-                  installProcess.output.pipeTo(
-                    new WritableStream({
-                      write(chunk) {
-                        // console.log(chunk);
-                      },
-                    })
-                  );
-                
-                  const exitCode = await installProcess.exit;
-                  if (exitCode !== 0) {
-                    console.error("❌ Install failed.");
-                    return;
-                  }
-                
-                  setClickCount(2); // Switch to Run
-                
-                  if (runProcess) {
-                    runProcess.kill();
-                  }
-                
-                  let tempRunProcess;
-                  switch (projectType) {
-                    case "react":
-                    case "next":
-                      tempRunProcess = await webContainer.spawn("npm", ["run", "dev"]);
-                      break;
-                    case "express":
-                      tempRunProcess = await webContainer.spawn("npm", ["start"]);
-                      break;
-                    default:
-                      tempRunProcess = await webContainer.spawn("npm", ["run", "dev"]);
-                  }
-                
-                  tempRunProcess.output.pipeTo(
-                    new WritableStream({
-                      write(chunk) {
-                        console.log(chunk);
-                      },
-                    })
-                  );
-                
-                  setRunProcess(tempRunProcess);
-                
-                  webContainer.on("server-ready", (port, url) => {
-                    console.log(port, url);
-                    setUrl(url);
-                  });
-
-                }}
-                sx={{
-                  color: "#4fc1ff",
-                  textTransform: "none",
-                  fontSize: "14px",
-                  "&:hover": {
-                    backgroundColor: "#2a2d2e",
-                  },
-                }}
-              >
-                {/* {clickCount === 0 ? "Run" : "Install"} */}
-                {clickCount === 0 ? "Install" : clickCount === 1 ? "Installing..." : "Run"}
-
-              </Button>
-            </Box>
-            <Modal
-              open={createModalOpen}
-              onClose={handleCreateModalClose}
-              aria-labelledby="create-modal-title"
-              aria-describedby="create-modal-description"
-              sx={{
-                backdropFilter: "blur(10px)",
-                backgroundColor: "rgba(0, 0, 0, 0.7)",
-              }}
-            >
-              <Box
-                sx={{
-                  position: "absolute",
-                  top: "50%",
-                  left: "50%",
-                  transform: "translate(-50%, -50%)",
-                  width: 400,
-                  backgroundColor: "#252526",
-                  border: "1px solid #333",
-                  boxShadow: "0 4px 20px rgba(0, 0, 0, 0.5)",
-                  p: 3,
-                  borderRadius: "4px",
-                  color: "#d4d4d4",
-                }}
-              >
-                <Typography
-                  id="create-modal-title"
-                  variant="h6"
-                  component="h2"
-                  gutterBottom
-                  sx={{ fontSize: "18px" }}
-                >
-                  Create New {newItemType === "file" ? "File" : "Folder"}
-                </Typography>
-                <TextField
-                  label="Name"
-                  variant="outlined"
-                  fullWidth
-                  value={newItemName}
-                  onChange={(e) => setNewItemName(e.target.value)}
-                  sx={{
-                    mb: 2,
-                    backgroundColor: "#1e1e1e",
-                    borderRadius: "4px",
-                    input: { color: "#d4d4d4" },
-                    label: { color: "#888" },
-                    "& .MuiOutlinedInput-root": {
-                      "& fieldset": { borderColor: "#444" },
-                      "&:hover fieldset": { borderColor: "#666" },
-                      "&.Mui-focused fieldset": { borderColor: "#4fc1ff" },
-                    },
-                  }}
-                />
-                <Box sx={{ display: "flex", gap: 1 }}>
-                  <Button
-                    onClick={handleCreateItem}
-                    variant="contained"
-                    sx={{
-                      backgroundColor: "#4caf50",
-                      color: "#ffffff",
-                      textTransform: "none",
-                      "&:hover": {
-                        backgroundColor: "#388e3c",
-                      },
-                    }}
-                  >
-                    Create
-                  </Button>
-                  <Button
-                    onClick={handleCreateModalClose}
-                    variant="contained"
-                    sx={{
-                      backgroundColor: "#3c3c3c",
-                      color: "#d4d4d4",
-                      textTransform: "none",
-                      "&:hover": {
-                        backgroundColor: "#444",
-                      },
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                </Box>
-              </Box>
-            </Modal>
-          </Typography>
-          <Divider
-            sx={{ margin: "0 16px", bgcolor: "rgba(255, 255, 255, 0.1)" }}
-          />
-          <Box
-            sx={{
-              display: "flex",
-              flexDirection: "column",
-              overflowX: "auto",
-              overflowY: "auto",
-              flex: "0 1 auto",
-              margin: "8px 0",
-              backgroundColor: "#252526",
-              padding: "8px",
-              "&::-webkit-scrollbar": {
-                width: "6px",
-                height: "6px",
-              },
-              "&::-webkit-scrollbar-thumb": {
-                background: "rgba(255, 255, 255, 0.2)",
-                borderRadius: "10px",
-              },
-              "&::-webkit-scrollbar-track": {
-                background: "transparent",
-              },
-            }}
-          >
-            <RenderFileTree tree={fileTree} />
-          </Box>
-          <Box
-            sx={{
-              flex: "1 1 auto",
-              padding: "12px",
-              backgroundColor: "#1e1e1e",
-              borderRadius: "4px",
-              color: "#d4d4d4",
-              overflow: "auto",
-              margin: "0 16px 16px 16px",
-              display: "flex",
-              flexDirection: "column",
-              minHeight: 0,
-              fontFamily: '"Fira Code", monospace',
-              fontSize: "14px",
-              lineHeight: "1.5",
-              "&::-webkit-scrollbar": {
-                width: "6px",
-                height: "6px",
-              },
-              "&::-webkit-scrollbar-thumb": {
-                background: "rgba(255, 255, 255, 0.2)",
-                borderRadius: "10px",
-              },
-              "&::-webkit-scrollbar-track": {
-                background: "transparent",
-              },
-            }}
-          >
-            {selectedFileName ? (
-              <>
-                <AceEditor
-                  mode={getLanguage(selectedFileName)}
-                  theme="monokai"
-                  value={selectedFileContent}
-                  onChange={handleFileContentChange}
-                  name="code-editor"
-                  editorProps={{ $blockScrolling: true }}
-                  setOptions={{
-                    enableBasicAutocompletion: true,
-                    enableLiveAutocompletion: true,
-                    enableSnippets: true,
-                    showLineNumbers: true,
-                    tabSize: 2,
-                    useWorker: false, // Disable Web Workers to fix 404 errors
-                  }}
-                  style={{
-                    width: "100%",
-                    height: "900px",
-                    borderRadius: "4px",
-                    fontFamily: '"Fira Code", monospace',
-                    fontSize: "14px",
-                  }}
-                />
-                <Button
-                  onClick={handleSave}
-                  sx={{
-                    mt: 0.3,
-                    backgroundColor: "#0078d4",
-                    color: "#ffffff",
-                    textTransform: "none",
-                    "&:hover": {
-                      backgroundColor: "#005ea2",
-                    },
-                  }}
-                >
-                  Save
-                </Button>
-              </>
-            ) : (
-              <Typography
-                sx={{ color: "#888", textAlign: "center", padding: "20px" }}
-              >
-                Select a file to view its contents
-              </Typography>
-            )}
-          </Box>
-        </StyledCard>
+      {/* --- MODIFICATION 1: DYNAMIC WIDTH --- */}
+      {/* The width of this Box changes based on whether the URL exists */}
+      <Box className={`${url ? 'w-[40vw]' : 'w-[60vw]'} rounded-lg flex flex-col transition-all duration-300 ease-in-out`}>
+        <FileTreePanel
+          fileTree={fileTree}
+          setFileTree={setFileTree}
+          selectedFileName={selectedFileName}
+          selectedFileContent={selectedFileContent}
+          expandedDirs={expandedDirs}
+          projectType={projectType}
+          clickCount={clickCount}
+          lastfiletreeid={lastfiletreeid}
+          webContainer={webContainer} // Pass webContainer to disable button
+          handleSelectFile={handleSelectFile}
+          toggleDirectory={toggleDirectory}
+          handleFileContentChange={handleFileContentChange}
+          handleSave={handleSave}
+          handleProjectTypeChange={handleProjectTypeChange}
+          handleRunProject={handleRunProject}
+          setNotification={setNotification}
+        />
       </Box>
 
-      <Box className="w-[40vw] rounded-lg flex flex-col">
-        <StyledCard className="h-full flex flex-col">
-          <Typography
-            variant="h5"
-            sx={{
-              color: "#d4d4d4",
-              fontSize: "16px",
-              fontWeight: 500,
-              px: 4,
-              py: 2,
-            }}
-          >
-            Project View
-          </Typography>
-          <Divider
-            sx={{ margin: "0 16px", bgcolor: "rgba(255, 255, 255, 0.1)" }}
+      {/* --- MODIFICATION 2: CONDITIONAL RENDERING --- */}
+      {/* This entire Box is only rendered when the URL exists */}
+      {url && (
+        <Box className="w-[40vw] rounded-lg flex flex-col">
+          <ProjectViewPanel
+            url={url}
+            setUrl={setUrl}
+            webContainer={webContainer}
           />
-          <TextField
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            label="Project URL"
-            variant="outlined"
-            fullWidth
-            sx={{
-              m: 2,
-              backgroundColor: "#1e1e1e",
-              borderRadius: "4px",
-              input: { color: "#d4d4d4" },
-              label: { color: "#888" },
-              "& .MuiOutlinedInput-root": {
-                "& fieldset": { borderColor: "#444" },
-                "&:hover fieldset": { borderColor: "#666" },
-                "&.Mui-focused fieldset": { borderColor: "#4fc1ff" },
-              },
-            }}
-          />
-          {url && webContainer && (
-            <Paper
-              sx={{
-                flex: 1,
-                m: 2,
-                borderRadius: 2,
-                overflow: "hidden",
-                border: "1px solid #333",
-              }}
-            >
-              <iframe
-                src={url}
-                title="Dynamic Content"
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  border: "none",
-                }}
-              />
-            </Paper>
-          )}
-        </StyledCard>
-      </Box>
+        </Box>
+      )}
 
       <Snackbar
         open={notification.open}
