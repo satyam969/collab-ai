@@ -4,8 +4,8 @@ Collab-AI is a modern web application that combines real-time collaboration feat
 
 ## Features
 
-### Core Features
-- Real-time collaborative code editing
+### core Features
+- Real-time collaborative code editing ("Live Room")
 - AI-powered code generation and assistance
 - Project management and file organization
 - Multiple project type support (React.js, Next.js, Express.js)
@@ -16,6 +16,8 @@ Collab-AI is a modern web application that combines real-time collaboration feat
 - Live project preview
 
 ### Technical Features
+- **Real-Time Collaboration**: Powered by Liveblocks and Yjs for conflict-free editing
+- **Advanced Editor**: Monaco Editor with multi-cursor support
 - WebContainer integration for running code in the browser
 - Real-time updates using Pusher
 - MongoDB for data persistence

@@ -485,6 +485,7 @@
 //           handleProjectTypeChange={handleProjectTypeChange}
 //           handleRunProject={handleRunProject}
 //           setNotification={setNotification}
+//           projectId={projectid}
 //         />
 //       </Box>
 
@@ -531,7 +532,7 @@ import dynamic from 'next/dynamic';
 
 const FileTreePanel = dynamic(
   () => import('@/components/FileTreePanel'),
-  { ssr: false } 
+  { ssr: false }
 );
 import ProjectViewPanel from "@/components/ProjectViewPanel";
 
@@ -781,8 +782,8 @@ const Projects = () => {
 
   const handleRunProject = async () => {
     if (!webContainer) {
-        console.error("WebContainer is not ready.");
-        return;
+      console.error("WebContainer is not ready.");
+      return;
     }
 
     setClickCount(1);
@@ -932,7 +933,7 @@ const Projects = () => {
           console.log("✅ WebContainer is ready.");
         })
         .catch(error => {
-            console.error("❌ Failed to initialize WebContainer:", error);
+          console.error("❌ Failed to initialize WebContainer:", error);
         });
     }
     allMessages();
@@ -982,7 +983,7 @@ const Projects = () => {
         gap: "8px",
       }}
     >
-      <Box className={ `${url ? 'w-[20vw]' : 'w-[40vw]'}  rounded-lg`}>
+      <Box className={`${url ? 'w-[20vw]' : 'w-[40vw]'}  rounded-lg`}>
         <ChatPanel
           chats={chats}
           newMessage={newMessage}
@@ -1021,6 +1022,7 @@ const Projects = () => {
           handleProjectTypeChange={handleProjectTypeChange}
           handleRunProject={handleRunProject}
           setNotification={setNotification}
+          projectId={projectid}
         />
       </Box>
 

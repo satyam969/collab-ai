@@ -11,7 +11,11 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  FormControlLabel,
+  Switch,
 } from "@mui/material";
+import LiveRoomWrapper from "./LiveRoomWrapper";
+import CollaborativeEditor from "./CollaborativeEditor";
 import { styled } from "@mui/system";
 import AceEditor from "react-ace";
 import axios from "axios";
@@ -59,7 +63,9 @@ const FileTreePanel = ({
   handleProjectTypeChange,
   handleRunProject,
   setNotification,
+  projectId,
 }) => {
+  const [isLiveMode, setIsLiveMode] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [createPath, setCreatePath] = useState("Root");
   const [newItemName, setNewItemName] = useState("");
@@ -72,11 +78,11 @@ const FileTreePanel = ({
   };
 
   const getLanguage = (fileName) => {
-  
+
     if (!fileName) {
       return "text";
     }
-  
+
     const extension = fileName.split(".").pop().toLowerCase();
     switch (extension) {
       case "js":
@@ -223,7 +229,7 @@ const FileTreePanel = ({
         severity: "error",
       });
     }
-}
+  }
 
   return (
     <StyledCard className="h-full flex flex-col">
@@ -234,6 +240,24 @@ const FileTreePanel = ({
       >
         File Tree
         <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={isLiveMode}
+                onChange={(e) => setIsLiveMode(e.target.checked)}
+                sx={{
+                  "& .MuiSwitch-switchBase.Mui-checked": {
+                    color: "#4fc1ff",
+                  },
+                  "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
+                    backgroundColor: "#4fc1ff",
+                  },
+                }}
+              />
+            }
+            label="Live Room"
+            sx={{ color: "#d4d4d4", mr: 1 }}
+          />
           <FormControl sx={{ minWidth: 120, mr: 1 }}>
             <InputLabel sx={{ color: "#888" }}>Project Type</InputLabel>
             <Select
@@ -424,29 +448,41 @@ const FileTreePanel = ({
       >
         {selectedFileName ? (
           <>
-            <AceEditor
-              mode={getLanguage(selectedFileName)}
-              theme="monokai"
-              value={selectedFileContent}
-              onChange={handleFileContentChange}
-              name="code-editor"
-              editorProps={{ $blockScrolling: true }}
-              setOptions={{
-                enableBasicAutocompletion: true,
-                enableLiveAutocompletion: true,
-                enableSnippets: true,
-                showLineNumbers: true,
-                tabSize: 2,
-                useWorker: false,
-              }}
-              style={{
-                width: "100%",
-                height: "900px",
-                borderRadius: "4px",
-                fontFamily: '"Fira Code", monospace',
-                fontSize: "18px",
-              }}
-            />
+            {isLiveMode ? (
+              <LiveRoomWrapper roomId={`room-${projectId}`}>
+                <CollaborativeEditor
+                  fileId={selectedFileName}
+                  language={getLanguage(selectedFileName)}
+                  theme="vs-dark"
+                  initialContent={selectedFileContent}
+                  onChange={handleFileContentChange}
+                />
+              </LiveRoomWrapper>
+            ) : (
+              <AceEditor
+                mode={getLanguage(selectedFileName)}
+                theme="monokai"
+                value={selectedFileContent}
+                onChange={handleFileContentChange}
+                name="code-editor"
+                editorProps={{ $blockScrolling: true }}
+                setOptions={{
+                  enableBasicAutocompletion: true,
+                  enableLiveAutocompletion: true,
+                  enableSnippets: true,
+                  showLineNumbers: true,
+                  tabSize: 2,
+                  useWorker: false,
+                }}
+                style={{
+                  width: "100%",
+                  height: "900px",
+                  borderRadius: "4px",
+                  fontFamily: '"Fira Code", monospace',
+                  fontSize: "18px",
+                }}
+              />
+            )}
             <Button
               onClick={handleSave}
               sx={{
