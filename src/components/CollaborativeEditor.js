@@ -32,6 +32,9 @@ export default function CollaborativeEditor({ fileId, language, theme = "vs-dark
 
     const handleEditorDidMount = (editor, monaco) => {
         setEditor(editor);
+        if (initialContent) {
+            editor.setValue(initialContent);
+        }
         editor.onDidChangeModelContent(() => {
             if (onChange) {
                 onChange(editor.getValue());

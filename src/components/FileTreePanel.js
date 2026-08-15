@@ -72,6 +72,16 @@ const FileTreePanel = ({
   const [createPath, setCreatePath] = useState("Root");
   const [newItemName, setNewItemName] = useState("");
   const [newItemType, setNewItemType] = useState("file");
+  const [liveRoomContent, setLiveRoomContent] = useState("");
+
+  const handleSaveClick = () => {
+    if (isLiveMode) {
+      handleSave(liveRoomContent, selectedFileName);
+      handleFileContentChange(liveRoomContent);
+    } else {
+      handleSave();
+    }
+  };
 
   const handleLiveModeToggle = (val) => {
     setIsLiveMode(val);
@@ -462,7 +472,7 @@ const FileTreePanel = ({
                   language={getLanguage(selectedFileName)}
                   theme="vs-dark"
                   initialContent={selectedFileContent}
-                  onChange={handleFileContentChange}
+                  onChange={setLiveRoomContent}
                   externalUpdateCount={externalUpdateCount}
                 />
               </LiveRoomWrapper>
@@ -492,7 +502,7 @@ const FileTreePanel = ({
               />
             )}
             <Button
-              onClick={handleSave}
+              onClick={handleSaveClick}
               sx={{
                 mt: 0.3,
                 backgroundColor: "#0078d4",

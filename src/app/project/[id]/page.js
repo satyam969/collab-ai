@@ -115,7 +115,7 @@ const Projects = () => {
     }
   };
 
-  const handleSave = async () => {
+  const handleSave = async (overrideContent = null, overrideFileName = null) => {
     try {
       if (!lastfiletreeid) {
         console.log("No Prev Prompt Generated fileTree ");
@@ -124,8 +124,20 @@ const Projects = () => {
 
       console.log("project id ", projectid);
 
+      let finalTree = fileTree;
+      if (overrideContent !== null && overrideFileName !== null) {
+        finalTree = JSON.parse(JSON.stringify(fileTree));
+        let target = finalTree;
+        const pathParts = overrideFileName.split("/");
+        for (let i = 0; i < pathParts.length - 1; i++) {
+          target = target[pathParts[i]].directory;
+        }
+        target[pathParts[pathParts.length - 1]].file.contents = overrideContent;
+        setFileTree(finalTree); // Also update state locally
+      }
+
       const response = await axios.patch("/api/messages", {
-        content: JSON.stringify({ fileTree }),
+        content: JSON.stringify({ fileTree: finalTree }),
         messageId: lastfiletreeid,
       });
       console.log(response);
