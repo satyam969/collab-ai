@@ -140,6 +140,20 @@ export default function CollaborativeEditor({ fileId, language, theme = "vs-dark
         }
     }, [externalUpdateCount]);
 
+    // Listen for another peer dismissing the update — auto-dismiss our toast too
+    useEffect(() => {
+        if (!doc) return;
+        const updateAppliedMap = doc.getMap('updateApplied');
+        const observer = () => {
+            const appliedFor = updateAppliedMap.get(fileId);
+            if (appliedFor) {
+                setShowUpdatePrompt(false);
+            }
+        };
+        updateAppliedMap.observe(observer);
+        return () => updateAppliedMap.unobserve(observer);
+    }, [doc, fileId]);
+
     // Generate a unique path suffix to ensure Monaco creates a fresh model.
     // This prevents the editor from loading cached content causing duplication
     // when merging with Yjs remote content.
@@ -170,6 +184,9 @@ export default function CollaborativeEditor({ fileId, language, theme = "vs-dark
                 }
                 yText.insert(0, initialContent);
                 doc.getMap('initialization').set(fileId, true);
+                // Signal to ALL peers that the update has been applied so their
+                // toasts auto-dismiss without them needing to click anything.
+                doc.getMap('updateApplied').set(fileId, Date.now());
             });
 
             setShowUpdatePrompt(false);
@@ -194,7 +211,7 @@ export default function CollaborativeEditor({ fileId, language, theme = "vs-dark
             {/* Update Prompt Toast */}
             {showUpdatePrompt && (
                 <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-50 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg flex items-center space-x-4 animate-fade-in-down">
-                    <span className="text-sm font-medium">AI generated new code for this file.</span>
+                    <span className="text-sm font-medium">New updates available for this file.</span>
                     <button
                         onClick={() => applyExternalUpdate()}
                         disabled={!isSynced}
