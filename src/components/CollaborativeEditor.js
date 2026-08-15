@@ -32,7 +32,7 @@ export default function CollaborativeEditor({ fileId, language, theme = "vs-dark
 
     const handleEditorDidMount = (editor, monaco) => {
         setEditor(editor);
-        if (initialContent) {
+        if (typeof initialContent === 'string') {
             editor.setValue(initialContent);
         }
         editor.onDidChangeModelContent(() => {
@@ -132,19 +132,23 @@ export default function CollaborativeEditor({ fileId, language, theme = "vs-dark
     const [uniqueId] = useState(Date.now());
     const editorPath = `${fileId}-${uniqueId}`;
 
-    // Apply AI/External updates directly to Yjs
+    // Apply AI/External updates directly to Yjs via Monaco to ensure clean sync
     const applyExternalUpdate = () => {
-        if (doc && fileId && initialContent) {
+        if (editor && typeof initialContent === 'string') {
             const confirmReset = window.confirm("This will apply the new updates to the Live Room for everyone. Continue?");
             if (!confirmReset) return;
 
             console.log("Applying external update to room for", fileId);
-            doc.transact(() => {
-                const yText = doc.getText(fileId);
-                yText.delete(0, yText.length);
-                yText.insert(0, initialContent);
-                doc.getMap('initialization').set(fileId, true);
-            });
+            
+            // Use Monaco's setValue. The MonacoBinding will automatically translate this 
+            // into the correct Yjs delete/insert operations and sync it to everyone cleanly.
+            editor.setValue(initialContent);
+
+            if (doc && fileId) {
+                doc.transact(() => {
+                    doc.getMap('initialization').set(fileId, true);
+                });
+            }
             setShowUpdatePrompt(false);
         }
     };

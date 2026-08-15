@@ -468,6 +468,7 @@ const FileTreePanel = ({
             {isLiveMode ? (
               <LiveRoomWrapper roomId={`room-${projectId}`}>
                 <CollaborativeEditor
+                  key={selectedFileName}
                   fileId={selectedFileName}
                   language={getLanguage(selectedFileName)}
                   theme="vs-dark"
