@@ -132,18 +132,20 @@ export default function CollaborativeEditor({ fileId, language, theme = "vs-dark
     const [uniqueId] = useState(Date.now());
     const editorPath = `${fileId}-${uniqueId}`;
 
-    // Debugging/Utility Function to Clear Room
-    const clearRoom = () => {
-        if (doc && fileId) {
-            const confirmReset = window.confirm("This will clear the current file's content in the Live Room and reload. Continue?");
+    // Apply AI/External updates directly to Yjs
+    const applyExternalUpdate = () => {
+        if (doc && fileId && initialContent) {
+            const confirmReset = window.confirm("This will apply the new updates to the Live Room for everyone. Continue?");
             if (!confirmReset) return;
 
-            console.log("Clearing room data for", fileId);
+            console.log("Applying external update to room for", fileId);
             doc.transact(() => {
-                doc.getText(fileId).delete(0, doc.getText(fileId).length);
-                doc.getMap('initialization').delete(fileId);
+                const yText = doc.getText(fileId);
+                yText.delete(0, yText.length);
+                yText.insert(0, initialContent);
+                doc.getMap('initialization').set(fileId, true);
             });
-            window.location.reload();
+            setShowUpdatePrompt(false);
         }
     };
 
@@ -155,8 +157,7 @@ export default function CollaborativeEditor({ fileId, language, theme = "vs-dark
                     <span className="text-sm font-medium">AI generated new code for this file.</span>
                     <button
                         onClick={() => {
-                            clearRoom();
-                            setShowUpdatePrompt(false);
+                            applyExternalUpdate();
                         }}
                         className="bg-white text-blue-600 px-3 py-1 rounded text-xs font-bold hover:bg-gray-100 transition-colors"
                     >
@@ -173,7 +174,7 @@ export default function CollaborativeEditor({ fileId, language, theme = "vs-dark
 
             {/* Reset Button - Visible on hover or when styling dictates */}
             <button
-                onClick={clearRoom}
+                onClick={applyExternalUpdate}
                 className="absolute bottom-4 right-6 z-50 bg-gray-800/80 hover:bg-red-600 text-gray-300 hover:text-white px-3 py-1.5 text-xs rounded-full shadow-lg backdrop-blur-sm transition-all duration-300 border border-white/10 opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0"
                 title="Sync Live Room content with database"
             >
