@@ -178,6 +178,23 @@ console.log(" We Are In Update Message ");
     message = await message.populate("sender", "name email");
     message = await message.populate("chat");
 
+    // Notify Live Room users that this file tree was saved manually.
+    // This fires the same 'updatedfiletree' event as AI saves so that
+    // any user in the Live Room sees the "Apply Updates" prompt.
+    try {
+      const parsedContent = JSON.parse(content);
+      if (parsedContent.fileTree && message.chat) {
+        await pusherServer.trigger(
+          `project-${message.chat._id || message.chat}`,
+          "updatedfiletree",
+          parsedContent
+        );
+      }
+    } catch (e) {
+      // If content isn't a fileTree patch, skip silently
+      console.log("[updateMessage] Skipping Pusher notify (not a fileTree save):", e.message);
+    }
+
     return message;
   } catch (error) {
     console.error("Error in updateMessage:", error.message);

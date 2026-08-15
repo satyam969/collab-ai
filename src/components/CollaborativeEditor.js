@@ -2,7 +2,7 @@
 import * as Y from "yjs";
 import { LiveblocksYjsProvider } from "@liveblocks/yjs";
 import { useRoom } from "@liveblocks/react/suspense";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import MonacoEditor from "@monaco-editor/react";
 import { MonacoBinding } from "y-monaco";
 
@@ -10,7 +10,7 @@ import { MonacoBinding } from "y-monaco";
 // or when switching files rapidly.
 const initializingFiles = new Set();
 
-export default function CollaborativeEditor({ fileId, language, theme = "vs-dark", onChange, initialContent, pendingFileTree, onApplyReady, onApplied }) {
+export default function CollaborativeEditor({ fileId, language, theme = "vs-dark", onChange, initialContent, externalUpdateCount, pendingFileTree }) {
     const room = useRoom();
     const [provider, setProvider] = useState(null);
     const [editor, setEditor] = useState(null);
@@ -21,6 +21,12 @@ export default function CollaborativeEditor({ fileId, language, theme = "vs-dark
     // where the user clicks the button while yText is still empty (not yet loaded
     // from the server), causing our insert to collide with the incoming server sync.
     const [isSynced, setIsSynced] = useState(false);
+    // Keep a ref so the binding useEffect can read the latest initialContent
+    // without adding it as a dependency (which would cause re-binding loops).
+    const initialContentRef = useRef(initialContent);
+    useEffect(() => {
+        initialContentRef.current = initialContent;
+    }, [initialContent]);
 
     // Initialize Y.Doc and Provider once per room
     useEffect(() => {
@@ -87,7 +93,17 @@ export default function CollaborativeEditor({ fileId, language, theme = "vs-dark
 
             // Check 1: Is it already initialized on server?
             if (isInitialized) {
-                console.log("[CollaborativeEditor] SKIP: Already initialized on server.");
+                // Even when initialized, check if the DB has NEWER content than the
+                // Live Room. This catches the offline scenario: AI/user saved while
+                // this user was offline, so Pusher event was missed (externalUpdateCount = 0),
+                // but the Liveblocks room is still holding stale content.
+                const latestDbContent = initialContentRef.current;
+                if (typeof latestDbContent === 'string' && currentContent !== latestDbContent) {
+                    console.log("[CollaborativeEditor] DB content differs from Live Room — showing Apply Updates.");
+                    setShowUpdatePrompt(true);
+                } else {
+                    console.log("[CollaborativeEditor] SKIP: Already initialized and content matches DB.");
+                }
                 return;
             }
 
@@ -134,19 +150,25 @@ export default function CollaborativeEditor({ fileId, language, theme = "vs-dark
         };
     }, [editor, doc, provider, fileId]); // Removed initialContent dependency to prevent re-runs loop
 
+    useEffect(() => {
+        if (externalUpdateCount && externalUpdateCount > 0) {
+            setShowUpdatePrompt(true);
+        }
+    }, [externalUpdateCount]);
+
     // Listen for another peer applying updates — auto-dismiss our toast too
     useEffect(() => {
         if (!doc) return;
         const updateAppliedMap = doc.getMap('updateApplied');
         const observer = () => {
             const lastApplied = updateAppliedMap.get('lastApplied');
-            if (lastApplied && onApplied) {
-                onApplied(); // Tell FileTreePanel to hide the banner
+            if (lastApplied) {
+                setShowUpdatePrompt(false);
             }
         };
         updateAppliedMap.observe(observer);
         return () => updateAppliedMap.unobserve(observer);
-    }, [doc, onApplied]);
+    }, [doc]);
 
     // Generate a unique path suffix to ensure Monaco creates a fresh model.
     // This prevents the editor from loading cached content causing duplication
@@ -204,14 +226,8 @@ export default function CollaborativeEditor({ fileId, language, theme = "vs-dark
             doc.getMap('updateApplied').set('lastApplied', Date.now());
         });
 
-        if (onApplied) onApplied();
+        setShowUpdatePrompt(false);
     };
-
-    // Expose applyExternalUpdate to parent (FileTreePanel) via onApplyReady callback
-    useEffect(() => {
-        if (onApplyReady) onApplyReady(applyExternalUpdate);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isSynced, doc, fileId, pendingFileTree, initialContent]);
 
     return (
         <div className="h-full w-full overflow-hidden relative group">
@@ -228,8 +244,30 @@ export default function CollaborativeEditor({ fileId, language, theme = "vs-dark
                 </div>
             )}
 
-            {/* The internal toast is removed — Apply Updates banner now lives in FileTreePanel
-                so it's always visible regardless of which file is open. */}
+            {/* Update Prompt Toast */}
+            {showUpdatePrompt && (
+                <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-50 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg flex items-center space-x-4 animate-fade-in-down">
+                    <span className="text-sm font-medium">New updates available for this file.</span>
+                    <button
+                        onClick={() => applyExternalUpdate()}
+                        disabled={!isSynced}
+                        className={`px-3 py-1 rounded text-xs font-bold transition-colors ${
+                            isSynced
+                                ? 'bg-white text-blue-600 hover:bg-gray-100'
+                                : 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                        }`}
+                        title={!isSynced ? "Waiting for Live Room to sync…" : ""}
+                    >
+                        {isSynced ? 'Apply Updates' : 'Syncing…'}
+                    </button>
+                    <button
+                        onClick={() => setShowUpdatePrompt(false)}
+                        className="text-white hover:text-gray-200"
+                    >
+                        ✕
+                    </button>
+                </div>
+            )}
 
             {/* Hover Reset Button */}
             <button
