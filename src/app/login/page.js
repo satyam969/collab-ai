@@ -8,7 +8,7 @@ import FormLabel from '@mui/material/FormLabel';
 import FormControl from '@mui/material/FormControl';  
 import TextField from '@mui/material/TextField';  
 import Typography from '@mui/material/Typography';  
-import { Link } from '@mui/material';  
+import { Link, Snackbar, Alert } from '@mui/material';  
 import { styled } from '@mui/system';  
 import { useRouter } from 'next/navigation';
 import { signIn } from "next-auth/react";
@@ -42,6 +42,7 @@ const LoginPage = () => {
     const [email, setEmail] = useState('');  
     const [password, setPassword] = useState('');  
     const [error, setError] = useState('');  
+    const [notification, setNotification] = useState({ open: false, message: '', severity: 'success' });
     const router = useRouter();
 
     const handleSubmit = async(e) => {  
@@ -57,13 +58,13 @@ const LoginPage = () => {
           });
           if (res?.error) {
             setError(res.error);
-          }
-
-        // console.log('Logging In:', { email, password });  
-        // console.log(res);
-        setError('');  
-        if (res?.ok) {
-            return router?.push("/");
+            setNotification({ open: true, message: res.error, severity: 'error' });
+          } else if (res?.ok) {
+            setError('');  
+            setNotification({ open: true, message: 'Login successful!', severity: 'success' });
+            setTimeout(() => {
+                router?.push("/");
+            }, 1000);
           }
     };  
 
@@ -117,6 +118,21 @@ const LoginPage = () => {
                     </Typography>  
                 </StyledCard>  
             </Box>  
+            <Snackbar
+                open={notification.open}
+                autoHideDuration={6000}
+                onClose={() => setNotification({ ...notification, open: false })}
+                anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+            >
+                <Alert
+                    onClose={() => setNotification({ ...notification, open: false })}
+                    severity={notification.severity}
+                    variant="filled"
+                    sx={{ width: '100%' }}
+                >
+                    {notification.message}
+                </Alert>
+            </Snackbar>
         </Box>  
     );  
 }  
