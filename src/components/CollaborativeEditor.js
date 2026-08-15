@@ -10,7 +10,7 @@ import { MonacoBinding } from "y-monaco";
 // or when switching files rapidly.
 const initializingFiles = new Set();
 
-export default function CollaborativeEditor({ fileId, language, theme = "vs-dark", onChange, initialContent, externalUpdateCount, pendingFileTree }) {
+export default function CollaborativeEditor({ fileId, language, theme = "vs-dark", onChange, initialContent, pendingFileTree, onApplyReady, onApplied }) {
     const room = useRoom();
     const [provider, setProvider] = useState(null);
     const [editor, setEditor] = useState(null);
@@ -134,25 +134,19 @@ export default function CollaborativeEditor({ fileId, language, theme = "vs-dark
         };
     }, [editor, doc, provider, fileId]); // Removed initialContent dependency to prevent re-runs loop
 
-    useEffect(() => {
-        if (externalUpdateCount && externalUpdateCount > 0) {
-            setShowUpdatePrompt(true);
-        }
-    }, [externalUpdateCount]);
-
     // Listen for another peer applying updates — auto-dismiss our toast too
     useEffect(() => {
         if (!doc) return;
         const updateAppliedMap = doc.getMap('updateApplied');
         const observer = () => {
             const lastApplied = updateAppliedMap.get('lastApplied');
-            if (lastApplied) {
-                setShowUpdatePrompt(false);
+            if (lastApplied && onApplied) {
+                onApplied(); // Tell FileTreePanel to hide the banner
             }
         };
         updateAppliedMap.observe(observer);
         return () => updateAppliedMap.unobserve(observer);
-    }, [doc]);
+    }, [doc, onApplied]);
 
     // Generate a unique path suffix to ensure Monaco creates a fresh model.
     // This prevents the editor from loading cached content causing duplication
@@ -210,8 +204,14 @@ export default function CollaborativeEditor({ fileId, language, theme = "vs-dark
             doc.getMap('updateApplied').set('lastApplied', Date.now());
         });
 
-        setShowUpdatePrompt(false);
+        if (onApplied) onApplied();
     };
+
+    // Expose applyExternalUpdate to parent (FileTreePanel) via onApplyReady callback
+    useEffect(() => {
+        if (onApplyReady) onApplyReady(applyExternalUpdate);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isSynced, doc, fileId, pendingFileTree, initialContent]);
 
     return (
         <div className="h-full w-full overflow-hidden relative group">
@@ -228,30 +228,8 @@ export default function CollaborativeEditor({ fileId, language, theme = "vs-dark
                 </div>
             )}
 
-            {/* Update Prompt Toast */}
-            {showUpdatePrompt && (
-                <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-50 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg flex items-center space-x-4 animate-fade-in-down">
-                    <span className="text-sm font-medium">New updates available for this file.</span>
-                    <button
-                        onClick={() => applyExternalUpdate()}
-                        disabled={!isSynced}
-                        className={`px-3 py-1 rounded text-xs font-bold transition-colors ${
-                            isSynced
-                                ? 'bg-white text-blue-600 hover:bg-gray-100'
-                                : 'bg-gray-400 text-gray-600 cursor-not-allowed'
-                        }`}
-                        title={!isSynced ? "Waiting for Live Room to sync…" : ""}
-                    >
-                        {isSynced ? 'Apply Updates' : 'Syncing…'}
-                    </button>
-                    <button
-                        onClick={() => setShowUpdatePrompt(false)}
-                        className="text-white hover:text-gray-200"
-                    >
-                        ✕
-                    </button>
-                </div>
-            )}
+            {/* The internal toast is removed — Apply Updates banner now lives in FileTreePanel
+                so it's always visible regardless of which file is open. */}
 
             {/* Hover Reset Button */}
             <button

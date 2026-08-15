@@ -74,6 +74,10 @@ const FileTreePanel = ({
   const [newItemName, setNewItemName] = useState("");
   const [newItemType, setNewItemType] = useState("file");
   const [liveRoomContent, setLiveRoomContent] = useState("");
+  // showUpdateBanner is true whenever Live Room is ON and there are pending AI/save updates
+  const [showUpdateBanner, setShowUpdateBanner] = useState(false);
+  // Ref to the Yjs apply function exposed by CollaborativeEditor
+  const applyUpdatesRef = React.useRef(null);
 
   const handleSaveClick = () => {
     if (isLiveMode) {
@@ -86,7 +90,21 @@ const FileTreePanel = ({
 
   const handleLiveModeToggle = (val) => {
     setIsLiveMode(val);
+    if (!val) setShowUpdateBanner(false); // clear banner when leaving Live Room
     if (onLiveModeChange) onLiveModeChange(val);
+  };
+  // Show the banner whenever there are pending updates AND we're in Live Room mode
+  React.useEffect(() => {
+    if (isLiveMode && externalUpdateCount > 0) {
+      setShowUpdateBanner(true);
+    }
+  }, [isLiveMode, externalUpdateCount]);
+
+  const handleApplyUpdates = () => {
+    if (applyUpdatesRef.current) {
+      applyUpdatesRef.current();
+    }
+    setShowUpdateBanner(false);
   };
 
   const handleCreateModalOpen = (path, type = "file") => {
@@ -464,6 +482,44 @@ const FileTreePanel = ({
           },
         }}
       >
+        {/* Apply Updates banner — always visible in Live Room when updates are pending,
+            regardless of which file is open. Lives outside CollaborativeEditor so it
+            doesn't disappear when the file is closed by handleUpdatedFileTree. */}
+        {isLiveMode && showUpdateBanner && (
+          <div style={{
+            background: 'linear-gradient(90deg, #1d4ed8, #2563eb)',
+            color: 'white',
+            padding: '8px 16px',
+            borderRadius: '8px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: '8px',
+            fontSize: '13px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+          }}>
+            <span>&#x1F4E6; New updates available for all files.</span>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <button
+                onClick={handleApplyUpdates}
+                style={{
+                  background: 'white', color: '#1d4ed8',
+                  border: 'none', borderRadius: '6px',
+                  padding: '4px 12px', fontSize: '12px',
+                  fontWeight: 700, cursor: 'pointer',
+                }}
+              >
+                Apply Updates
+              </button>
+              <button
+                onClick={() => setShowUpdateBanner(false)}
+                style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '16px' }}
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
         {selectedFileName ? (
           <>
             {isLiveMode ? (
@@ -475,8 +531,9 @@ const FileTreePanel = ({
                   theme="vs-dark"
                   initialContent={selectedFileContent}
                   onChange={setLiveRoomContent}
-                  externalUpdateCount={externalUpdateCount}
                   pendingFileTree={pendingFileTree}
+                  onApplyReady={(fn) => { applyUpdatesRef.current = fn; }}
+                  onApplied={() => setShowUpdateBanner(false)}
                 />
               </LiveRoomWrapper>
             ) : (
