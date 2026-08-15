@@ -10,11 +10,12 @@ import { MonacoBinding } from "y-monaco";
 // or when switching files rapidly.
 const initializingFiles = new Set();
 
-export default function CollaborativeEditor({ fileId, language, theme = "vs-dark", onChange, initialContent }) {
+export default function CollaborativeEditor({ fileId, language, theme = "vs-dark", onChange, initialContent, externalUpdateCount }) {
     const room = useRoom();
     const [provider, setProvider] = useState(null);
     const [editor, setEditor] = useState(null);
     const [doc, setDoc] = useState(null);
+    const [showUpdatePrompt, setShowUpdatePrompt] = useState(false);
 
     // Initialize Y.Doc and Provider once per room
     useEffect(() => {
@@ -116,6 +117,12 @@ export default function CollaborativeEditor({ fileId, language, theme = "vs-dark
         };
     }, [editor, doc, provider, fileId]); // Removed initialContent dependency to prevent re-runs loop
 
+    useEffect(() => {
+        if (externalUpdateCount && externalUpdateCount > 0) {
+            setShowUpdatePrompt(true);
+        }
+    }, [externalUpdateCount]);
+
     // Generate a unique path suffix to ensure Monaco creates a fresh model
     // This prevents the editor from loading cached content which causes duplication
     // when merging with Yjs remote content.
@@ -139,13 +146,35 @@ export default function CollaborativeEditor({ fileId, language, theme = "vs-dark
 
     return (
         <div className="h-full w-full overflow-hidden relative group">
+            {/* Update Prompt Toast */}
+            {showUpdatePrompt && (
+                <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-50 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg flex items-center space-x-4 animate-fade-in-down">
+                    <span className="text-sm font-medium">AI generated new code for this file.</span>
+                    <button
+                        onClick={() => {
+                            clearRoom();
+                            setShowUpdatePrompt(false);
+                        }}
+                        className="bg-white text-blue-600 px-3 py-1 rounded text-xs font-bold hover:bg-gray-100 transition-colors"
+                    >
+                        Apply Updates
+                    </button>
+                    <button
+                        onClick={() => setShowUpdatePrompt(false)}
+                        className="text-white hover:text-gray-200"
+                    >
+                        ✕
+                    </button>
+                </div>
+            )}
+
             {/* Reset Button - Visible on hover or when styling dictates */}
             <button
                 onClick={clearRoom}
                 className="absolute bottom-4 right-6 z-50 bg-gray-800/80 hover:bg-red-600 text-gray-300 hover:text-white px-3 py-1.5 text-xs rounded-full shadow-lg backdrop-blur-sm transition-all duration-300 border border-white/10 opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0"
-                title="Reset Live Room content for this file"
+                title="Sync Live Room content with database"
             >
-                Reset Content
+                Apply Updates
             </button>
             <MonacoEditor
                 height="100%" // Match the height in FileTreePanel or use 100%

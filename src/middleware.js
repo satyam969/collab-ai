@@ -5,14 +5,14 @@ export function middleware(req) {
 
 
 
- 
+
   if (
-    
-    pathname.startsWith('/signup')||
-    pathname.startsWith('/login') || 
+
+    pathname.startsWith('/signup') ||
+    pathname.startsWith('/login') ||
     pathname.startsWith('/api/auth') ||
-    pathname.startsWith('/_next/static') || 
-    pathname.startsWith('/favicon.ico') 
+    pathname.startsWith('/_next/static') ||
+    pathname.startsWith('/favicon.ico')
   ) {
     return NextResponse.next();
   }
@@ -21,11 +21,11 @@ export function middleware(req) {
   const isProduction = process.env.NODE_ENV === 'production';
   const cookieName = isProduction ? '__Secure-next-auth.session-token' : 'next-auth.session-token';
   const session = req.cookies.get(cookieName);
-  
 
 
+  // valid cookie or not ?
 
- 
+
   if (session) {
     return NextResponse.next();
   }
@@ -37,6 +37,6 @@ export function middleware(req) {
 
 export const config = {
   matcher: [
-    '/((?!api|_next/static|favicon.ico).*)', 
+    '/((?!api|_next/static|favicon.ico).*)',
   ],
 };

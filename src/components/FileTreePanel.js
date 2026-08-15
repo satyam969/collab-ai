@@ -64,12 +64,19 @@ const FileTreePanel = ({
   handleRunProject,
   setNotification,
   projectId,
+  externalUpdateCount,
+  onLiveModeChange
 }) => {
   const [isLiveMode, setIsLiveMode] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [createPath, setCreatePath] = useState("Root");
   const [newItemName, setNewItemName] = useState("");
   const [newItemType, setNewItemType] = useState("file");
+
+  const handleLiveModeToggle = (val) => {
+    setIsLiveMode(val);
+    if (onLiveModeChange) onLiveModeChange(val);
+  };
 
   const handleCreateModalOpen = (path, type = "file") => {
     setCreatePath(path);
@@ -456,6 +463,7 @@ const FileTreePanel = ({
                   theme="vs-dark"
                   initialContent={selectedFileContent}
                   onChange={handleFileContentChange}
+                  externalUpdateCount={externalUpdateCount}
                 />
               </LiveRoomWrapper>
             ) : (

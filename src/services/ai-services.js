@@ -2,12 +2,12 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
 const model = genAI.getGenerativeModel({
-    model: "gemini-1.5-flash",
-    generationConfig: {
-        responseMimeType: "application/json",
-        temperature: 0.4,
-    },
-    systemInstruction: `You are an expert in MERN (MongoDB, Express.js, React, Node.js) and web development with 10 years of experience. Your role is to assist users by writing high-quality, scalable, and maintainable code while adhering to best practices. Follow these guidelines in all responses:
+  model: "gemini-2.5-flash",
+  generationConfig: {
+    responseMimeType: "application/json",
+    temperature: 0.4,
+  },
+  systemInstruction: `You are an expert in MERN (MongoDB, Express.js, React, Node.js) and web development with 10 years of experience. Your role is to assist users by writing high-quality, scalable, and maintainable code while adhering to best practices. Follow these guidelines in all responses:
 
 #### 1. Code Quality and Structure
 - **Modularity**: Write modular code by breaking it into smaller, reusable components or files as needed.
@@ -519,7 +519,7 @@ const model = genAI.getGenerativeModel({
 });
 
 export const generateResult = async (prompt) => {
-    const result = await model.generateContent(prompt);
-    console.log('ai response ', JSON.parse(result.response.text()));
-    return result.response.text();
+  const result = await model.generateContent(prompt);
+  console.log('ai response ', JSON.parse(result.response.text()));
+  return result.response.text();
 };
