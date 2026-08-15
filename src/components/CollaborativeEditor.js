@@ -10,7 +10,7 @@ import { MonacoBinding } from "y-monaco";
 // or when switching files rapidly.
 const initializingFiles = new Set();
 
-export default function CollaborativeEditor({ fileId, language, theme = "vs-dark", onChange, initialContent, externalUpdateCount }) {
+export default function CollaborativeEditor({ fileId, language, theme = "vs-dark", onChange, initialContent, externalUpdateCount, pendingFileTree }) {
     const room = useRoom();
     const [provider, setProvider] = useState(null);
     const [editor, setEditor] = useState(null);
@@ -140,19 +140,19 @@ export default function CollaborativeEditor({ fileId, language, theme = "vs-dark
         }
     }, [externalUpdateCount]);
 
-    // Listen for another peer dismissing the update — auto-dismiss our toast too
+    // Listen for another peer applying updates — auto-dismiss our toast too
     useEffect(() => {
         if (!doc) return;
         const updateAppliedMap = doc.getMap('updateApplied');
         const observer = () => {
-            const appliedFor = updateAppliedMap.get(fileId);
-            if (appliedFor) {
+            const lastApplied = updateAppliedMap.get('lastApplied');
+            if (lastApplied) {
                 setShowUpdatePrompt(false);
             }
         };
         updateAppliedMap.observe(observer);
         return () => updateAppliedMap.unobserve(observer);
-    }, [doc, fileId]);
+    }, [doc]);
 
     // Generate a unique path suffix to ensure Monaco creates a fresh model.
     // This prevents the editor from loading cached content causing duplication
@@ -160,37 +160,57 @@ export default function CollaborativeEditor({ fileId, language, theme = "vs-dark
     const [uniqueId] = useState(Date.now());
     const editorPath = `${fileId}-${uniqueId}`;
 
-    // Apply AI/External updates via direct Yjs transaction — this is the ONLY
-    // safe way to replace content for ALL connected peers atomically.
-    // CRITICAL: We MUST wait for isSynced before running this. If yText is still
-    // empty (Liveblocks not yet synced), inserting new content and then having
-    // Liveblocks sync the old content on top causes DUPLICATION.
+    // Recursively flatten the fileTree object into { "path/to/file": "contents" }
+    const flattenFileTree = (tree, prefix = "") => {
+        const result = {};
+        for (const [name, node] of Object.entries(tree)) {
+            const fullPath = prefix ? `${prefix}/${name}` : name;
+            if (node.file) {
+                result[fullPath] = node.file.contents ?? "";
+            } else if (node.directory) {
+                Object.assign(result, flattenFileTree(node.directory, fullPath));
+            }
+        }
+        return result;
+    };
+
+    // Apply ALL files from pendingFileTree to the shared Yjs doc in one atomic transaction.
+    // CRITICAL: We MUST wait for isSynced before running this — see comment on isSynced above.
     const applyExternalUpdate = () => {
         if (!isSynced) {
             alert("Please wait — the Live Room is still connecting. Try again in a moment.");
             return;
         }
-        if (doc && fileId && typeof initialContent === 'string') {
-            const confirmReset = window.confirm("This will apply the new updates to the Live Room for everyone. Continue?");
-            if (!confirmReset) return;
+        if (!doc) return;
 
-            console.log("Applying external update via Yjs for", fileId);
+        // Use pendingFileTree if available (full multi-file update), else fall back to current file
+        const treeToApply = pendingFileTree || (fileId && typeof initialContent === 'string' ? { [fileId]: { file: { contents: initialContent } } } : null);
+        if (!treeToApply) return;
 
-            const yText = doc.getText(fileId);
-            doc.transact(() => {
-                // Atomically wipe and replace — Yjs broadcasts this to ALL peers
+        const confirmReset = window.confirm("This will apply all pending updates to the Live Room for everyone. Continue?");
+        if (!confirmReset) return;
+
+        const flatFiles = flattenFileTree(treeToApply);
+        console.log("Applying updates for files:", Object.keys(flatFiles));
+
+        doc.transact(() => {
+            for (const [filePath, contents] of Object.entries(flatFiles)) {
+                const yText = doc.getText(filePath);
+                // Atomically wipe and replace each file — broadcasts to ALL peers
                 if (yText.length > 0) {
                     yText.delete(0, yText.length);
                 }
-                yText.insert(0, initialContent);
-                doc.getMap('initialization').set(fileId, true);
-                // Signal to ALL peers that the update has been applied so their
-                // toasts auto-dismiss without them needing to click anything.
-                doc.getMap('updateApplied').set(fileId, Date.now());
-            });
+                if (contents) {
+                    yText.insert(0, contents);
+                }
+                // Mark as initialized so the sync handler doesn't re-insert
+                doc.getMap('initialization').set(filePath, true);
+            }
+            // Signal to ALL peers that update has been applied so toasts auto-dismiss
+            doc.getMap('updateApplied').set('lastApplied', Date.now());
+        });
 
-            setShowUpdatePrompt(false);
-        }
+        setShowUpdatePrompt(false);
     };
 
     return (

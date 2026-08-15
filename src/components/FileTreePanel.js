@@ -65,6 +65,7 @@ const FileTreePanel = ({
   setNotification,
   projectId,
   externalUpdateCount,
+  pendingFileTree,
   onLiveModeChange
 }) => {
   const [isLiveMode, setIsLiveMode] = useState(false);
@@ -475,6 +476,7 @@ const FileTreePanel = ({
                   initialContent={selectedFileContent}
                   onChange={setLiveRoomContent}
                   externalUpdateCount={externalUpdateCount}
+                  pendingFileTree={pendingFileTree}
                 />
               </LiveRoomWrapper>
             ) : (

@@ -43,6 +43,7 @@ const Projects = () => {
   const [clickCount, setClickCount] = useState(0);
   const [expandedDirs, setExpandedDirs] = useState({});
   const [externalUpdateCount, setExternalUpdateCount] = useState(0);
+  const [pendingFileTree, setPendingFileTree] = useState(null); // Full fileTree snapshot to apply to Live Room
   const [notification, setNotification] = useState({
     open: false,
     message: "",
@@ -367,6 +368,7 @@ const Projects = () => {
       setSelectedFileContent("");
       setSelectedFileName("");
       setFileTree(message.fileTree);
+      setPendingFileTree(message.fileTree); // Store full snapshot for Apply Updates
       setExternalUpdateCount(prev => prev + 1);
     };
 
@@ -519,6 +521,7 @@ const Projects = () => {
           setNotification={setNotification}
           projectId={projectid}
           externalUpdateCount={externalUpdateCount}
+          pendingFileTree={pendingFileTree}
         />
       </Box>
 
