@@ -132,23 +132,27 @@ export default function CollaborativeEditor({ fileId, language, theme = "vs-dark
     const [uniqueId] = useState(Date.now());
     const editorPath = `${fileId}-${uniqueId}`;
 
-    // Apply AI/External updates directly to Yjs via Monaco to ensure clean sync
+    // Apply AI/External updates via direct Yjs transaction — this is the ONLY
+    // safe way to replace content for ALL connected peers atomically.
+    // editor.setValue() only updates the local Monaco model; the MonacoBinding
+    // diff propagation is unreliable for large replacements and causes duplication.
     const applyExternalUpdate = () => {
-        if (editor && typeof initialContent === 'string') {
+        if (doc && fileId && typeof initialContent === 'string') {
             const confirmReset = window.confirm("This will apply the new updates to the Live Room for everyone. Continue?");
             if (!confirmReset) return;
 
-            console.log("Applying external update to room for", fileId);
-            
-            // Use Monaco's setValue. The MonacoBinding will automatically translate this 
-            // into the correct Yjs delete/insert operations and sync it to everyone cleanly.
-            editor.setValue(initialContent);
+            console.log("Applying external update via Yjs for", fileId);
 
-            if (doc && fileId) {
-                doc.transact(() => {
-                    doc.getMap('initialization').set(fileId, true);
-                });
-            }
+            const yText = doc.getText(fileId);
+            doc.transact(() => {
+                // Atomically wipe and replace — Yjs broadcasts this to ALL peers
+                if (yText.length > 0) {
+                    yText.delete(0, yText.length);
+                }
+                yText.insert(0, initialContent);
+                doc.getMap('initialization').set(fileId, true);
+            });
+
             setShowUpdatePrompt(false);
         }
     };
